@@ -1,0 +1,5 @@
+{
+  "name": "HaskellAbyss",
+  "image": "haskell:8.10",
+  "extensions": ["haskell.haskell"]
+}
