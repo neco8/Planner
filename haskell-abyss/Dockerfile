@@ -2,7 +2,8 @@ FROM haskell:8.10-buster as build
 RUN stack upgrade && stack setup
 COPY . /opt/build
 WORKDIR /opt/build
-RUN stack install && stack build --system-ghc
+RUN stack install
+RUN stack build --system-ghc
 RUN mkdir -p /opt/app && stack --local-bin-path=/opt/app install
 
 FROM debian:buster-slim
