@@ -1,5 +1,5 @@
 {
   "name": "HaskellAbyss",
-  "image": "Dockerfile",
+  "build": { "dockerfile": "Dockerfile" },
   "extensions": ["haskell.haskell", "haskell.hlint"]
 }
