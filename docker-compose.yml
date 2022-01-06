@@ -1,0 +1,5 @@
+version: "3"
+services:
+  haskell-abyss:
+    build: ./haskell-abyss
+    container_name: "${PROJECT_NAME}"
