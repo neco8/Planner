@@ -1,0 +1,5 @@
+{
+  "name": "HaskellAbyss",
+  "build": { "dockerfile": "Dockerfile" },
+  "extensions": ["haskell.haskell", "hoovercj.haskell-linter", "vigoo.stylish-haskell"]
+}
