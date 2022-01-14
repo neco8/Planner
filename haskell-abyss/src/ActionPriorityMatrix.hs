@@ -55,17 +55,17 @@ type EffortRadius = Float
 
 type Radius = (ImpactRadius, EffortRadius)
 
-distanceFromGreatest_ :: Impact -> Effort -> Radius -> ActionPriorityMatrix qwa -> Float
-distanceFromGreatest_ impact effort (ir, er) apm =
+apmToCriterion_ :: Impact -> Effort -> Radius -> ActionPriorityMatrix qwa -> Float
+apmToCriterion_ impact effort (ir, er) apm =
   ((coerce (_impact apm) - coerce impact) * er) ** 2 + ((coerce (_effort apm) - coerce effort) * ir) ** 2
 
-distanceFromGreatest :: ActionPriorityMatrix qwa -> Float
-distanceFromGreatest apm
-  | runImpact (_impact apm) < 5.0 = distanceFromGreatest_ greatestImpact greatestEffort (1, 2) (apm & impact %~ (Impact . (/ 2) . runImpact))
-  | otherwise = distanceFromGreatest_ greatestImpact greatestEffort (1, 2) apm
+apmToCriterion :: ActionPriorityMatrix qwa -> Float
+apmToCriterion apm
+  | runImpact (_impact apm) < 5.0 = apmToCriterion_ greatestImpact greatestEffort (1, 2) (apm & impact %~ (Impact . (/ 2) . runImpact))
+  | otherwise = apmToCriterion_ greatestImpact greatestEffort (1, 2) apm
 
 instance Eq qwa => Ord (ActionPriorityMatrix qwa) where
-  compare = compare `on` distanceFromGreatest
+  compare = compare `on` apmToCriterion
 
 apm = ActionPriorityMatrix (Name "name1") (Impact 10.0) (Effort 0.0) ["string"]
 apm1 = ActionPriorityMatrix (Name "name1") (Impact 10.0) (Effort 10.0) ["string"]
