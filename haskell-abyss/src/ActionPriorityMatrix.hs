@@ -1,24 +1,27 @@
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 module ActionPriorityMatrix where
 import           Data.Coerce          (coerce)
 import           Data.Function        (on)
 import           Data.Functor.Classes (Eq1, eq1)
-import           Data.Text            (Text)
+import qualified Data.Text as T           (Text, lines)
 import           Data.Tree            (Tree (..))
+import           Data.Vector          (Vector)
 import           GHC.Generics         (Generic)
 import           Lens.Micro           ((%~), (&))
 import           Lens.Micro.TH        (makeLenses)
 import           QuickWinAnalysis     (QuickWinAnalysis)
+import           Prelude              hiding (elem)
 
-newtype Name = Name String deriving (Eq, Ord, Show)
+newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
-runName :: Name -> String
+runName :: Name -> T.Text
 runName = coerce
 
-getName :: String -> Maybe Name
+getName :: T.Text -> Maybe Name
 getName s
-  | '\n' `elem` s = Nothing
+  | length (T.lines s) /= 1 = Nothing
   | otherwise     = Just $ Name s
 
 newtype Impact = Impact Float deriving (Eq, Ord, Show)
@@ -35,7 +38,7 @@ data ActionPriorityMatrix qwa = ActionPriorityMatrix
   { _name   :: Name
   , _impact :: Impact
   , _effort :: Effort
-  , _qwas   :: [qwa]
+  , _qwas   :: Vector qwa
   } deriving (Eq, Show)
 makeLenses ''ActionPriorityMatrix
 
