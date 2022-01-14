@@ -1,7 +1,7 @@
 module PPrint where
 
-import Data.Tree
-import Data.List (intercalate)
+import           Data.List (intercalate)
+import           Data.Tree
 
 class PPrint a where
   pprint :: a -> String

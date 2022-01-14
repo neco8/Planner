@@ -1,15 +1,15 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module ActionPriorityMatrix where
-import QuickWinAnalysis (QuickWinAnalysis)
-import Data.Functor.Classes (Eq1, eq1)
-import GHC.Generics (Generic)
-import Data.Tree (Tree (..))
-import Data.Coerce (coerce)
-import Data.Function (on)
-import Lens.Micro ((%~), (&))
-import Lens.Micro.TH (makeLenses)
-import Data.Text (Text)
+import           Data.Coerce          (coerce)
+import           Data.Function        (on)
+import           Data.Functor.Classes (Eq1, eq1)
+import           Data.Text            (Text)
+import           Data.Tree            (Tree (..))
+import           GHC.Generics         (Generic)
+import           Lens.Micro           ((%~), (&))
+import           Lens.Micro.TH        (makeLenses)
+import           QuickWinAnalysis     (QuickWinAnalysis)
 
 newtype Name = Name String deriving (Eq, Ord, Show)
 

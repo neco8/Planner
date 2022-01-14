@@ -1,7 +1,7 @@
 module Todo (Todo (..)) where
 
-import Data.String (IsString)
-import PPrint (PPrint, pprint)
+import           Data.String (IsString)
+import           PPrint      (PPrint, pprint)
 
 data Todo s = Todo Bool s deriving (Eq, Ord, Show)
 

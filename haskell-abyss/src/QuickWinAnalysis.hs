@@ -1,5 +1,5 @@
 module QuickWinAnalysis where
-import Data.Coerce (coerce)
+import           Data.Coerce (coerce)
 
 newtype Name = Name String deriving (Eq, Ord, Show)
 
