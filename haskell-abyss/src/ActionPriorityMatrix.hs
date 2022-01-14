@@ -5,14 +5,14 @@ module ActionPriorityMatrix where
 import           Data.Coerce          (coerce)
 import           Data.Function        (on)
 import           Data.Functor.Classes (Eq1, eq1)
-import qualified Data.Text as T           (Text, lines)
+import qualified Data.Text            as T (Text, lines)
 import           Data.Tree            (Tree (..))
 import           Data.Vector          (Vector)
 import           GHC.Generics         (Generic)
 import           Lens.Micro           ((%~), (&))
 import           Lens.Micro.TH        (makeLenses)
-import           QuickWinAnalysis     (QuickWinAnalysis)
 import           Prelude              hiding (elem)
+import           QuickWinAnalysis     (QuickWinAnalysis)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
