@@ -5,6 +5,7 @@ module ActionPriorityMatrix where
 import           Data.Coerce          (coerce)
 import           Data.Function        (on)
 import           Data.Functor.Classes (Eq1, eq1)
+import           Data.String          (IsString, fromString)
 import qualified Data.Text            as T (Text, lines)
 import           Data.Tree            (Tree (..))
 import           Data.Vector          (Vector)
@@ -15,6 +16,9 @@ import           Prelude              hiding (elem)
 import           QuickWinAnalysis     (QuickWinAnalysis)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
+
+instance IsString Name where
+  fromString = Name . fromString
 
 runName :: Name -> T.Text
 runName = coerce

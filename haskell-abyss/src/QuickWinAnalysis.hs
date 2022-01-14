@@ -1,9 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module QuickWinAnalysis where
 import           Data.Coerce (coerce)
+import           Data.String (IsString, fromString)
 import           Data.Text   (Text)
 
 newtype Name = Name Text deriving (Eq, Ord, Show)
+
+instance IsString Name where
+  fromString = Name . fromString
 
 newtype EaseOfImplement = EaseOfImplement Float deriving (Eq, Ord, Show)
 
