@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module QuickWinAnalysis where
 import           Data.Coerce (coerce)
+import           Data.Maybe  (isNothing)
 import           Data.String (IsString, fromString)
-import qualified Data.Text   as T (Text, lines)
+import qualified Data.Text   as T (Text, find)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
@@ -14,8 +15,8 @@ runName = coerce
 
 getName :: T.Text -> Maybe Name
 getName s
-  | length (T.lines s) /= 1 = Nothing
-  | otherwise     = Just $ Name s
+  | isNothing $ T.find (== '\n') s = Just $ Name s
+  | otherwise     = Nothing
 
 newtype EaseOfImplement = EaseOfImplement Float deriving (Eq, Ord, Show)
 

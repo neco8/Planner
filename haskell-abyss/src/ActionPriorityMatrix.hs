@@ -6,13 +6,14 @@ import           Data.Coerce          (coerce)
 import           Data.Function        (on)
 import           Data.Functor.Classes (Eq1, eq1)
 import           Data.String          (IsString, fromString)
-import qualified Data.Text            as T (Text, lines)
+import qualified Data.Text            as T (Text, find)
 import           Data.Tree            (Tree (..))
 import           Data.Vector          (Vector)
 import           GHC.Generics         (Generic)
 import           Lens.Micro           ((%~), (&))
 import           Lens.Micro.TH        (makeLenses)
 import           QuickWinAnalysis     (QuickWinAnalysis)
+import Data.Maybe (isNothing)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
@@ -24,8 +25,8 @@ runName = coerce
 
 getName :: T.Text -> Maybe Name
 getName s
-  | length (T.lines s) /= 1 = Nothing
-  | otherwise     = Just $ Name s
+  | isNothing $ T.find (== '\n') s = Just $ Name s
+  | otherwise     = Nothing
 
 newtype Impact = Impact Float deriving (Eq, Ord, Show)
 
