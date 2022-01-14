@@ -27,6 +27,7 @@ library
   exposed-modules:
       Lib
       PPrint
+      Stub
       Todo
   other-modules:
       Paths_Planner
@@ -34,6 +35,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , containers
     , megaparsec
   default-language: Haskell2010
 
@@ -47,6 +49,7 @@ executable Planner-exe
   build-depends:
       Planner
     , base >=4.7 && <5
+    , containers
     , megaparsec
   default-language: Haskell2010
 
@@ -61,5 +64,6 @@ test-suite Planner-test
   build-depends:
       Planner
     , base >=4.7 && <5
+    , containers
     , megaparsec
   default-language: Haskell2010
