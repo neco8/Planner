@@ -5,6 +5,7 @@ module ActionPriorityMatrix where
 import           Data.Coerce          (coerce)
 import           Data.Function        (on)
 import           Data.Functor.Classes (Eq1, eq1)
+import           Data.Maybe           (isNothing)
 import           Data.String          (IsString, fromString)
 import qualified Data.Text            as T (Text, find)
 import           Data.Tree            (Tree (..))
@@ -13,7 +14,6 @@ import           GHC.Generics         (Generic)
 import           Lens.Micro           ((%~), (&))
 import           Lens.Micro.TH        (makeLenses)
 import           QuickWinAnalysis     (QuickWinAnalysis)
-import Data.Maybe (isNothing)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 

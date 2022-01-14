@@ -10,3 +10,5 @@ if [ -z "`git config --local user.email`" ]; then
   exit 1
 fi
 
+stylish-haskell -r -i .
+hlint -c ./
