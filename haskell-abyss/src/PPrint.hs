@@ -4,7 +4,6 @@ module PPrint where
 import           Data.List (intercalate)
 import qualified Data.Text as T (Text, intercalate, lines)
 import           Data.Tree
-import           Prelude   hiding (intercalate, lines)
 
 class PPrint a where
   pprint :: a -> T.Text

@@ -12,7 +12,6 @@ import           Data.Vector          (Vector)
 import           GHC.Generics         (Generic)
 import           Lens.Micro           ((%~), (&))
 import           Lens.Micro.TH        (makeLenses)
-import           Prelude              hiding (elem)
 import           QuickWinAnalysis     (QuickWinAnalysis)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
@@ -33,10 +32,20 @@ newtype Impact = Impact Float deriving (Eq, Ord, Show)
 runImpact :: Impact -> Float
 runImpact = coerce
 
+getImpact :: Float -> Maybe Impact
+getImpact n
+  | n > 0 && n <= 10 = Just $ Impact n
+  | otherwise = Nothing
+
 newtype Effort = Effort Float deriving (Eq, Ord, Show)
 
 runEffort :: Effort -> Float
 runEffort = coerce
+
+getEffort :: Float -> Maybe Effort
+getEffort n
+  | n > 0 && n <= 10 = Just $ Effort n
+  | otherwise = Nothing
 
 data ActionPriorityMatrix qwa = ActionPriorityMatrix
   { _name   :: Name
