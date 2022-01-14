@@ -27,7 +27,7 @@ library
   exposed-modules:
       Lib
       PPrint
-      Stub
+      QuickWinAnalysis
       Todo
   other-modules:
       Paths_Planner
