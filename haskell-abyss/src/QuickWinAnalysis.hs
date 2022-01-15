@@ -2,7 +2,7 @@
 module QuickWinAnalysis where
 import           Data.Coerce (coerce)
 import           Data.Maybe  (isNothing)
-import qualified Data.Text   as T (Text, find)
+import qualified Data.Text   as T (Text, dropWhile, dropWhileEnd, find)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
@@ -11,7 +11,7 @@ runName = coerce
 
 getName :: T.Text -> Maybe Name
 getName s
-  | isNothing $ T.find (== '\n') s = Just $ Name s
+  | isNothing $ T.find (== '\n') s = Just . Name . T.dropWhileEnd (== ' ') $ T.dropWhile (== ' ') s
   | otherwise     = Nothing
 
 newtype EaseOfImplement = EaseOfImplement Float deriving (Eq, Ord, Show)

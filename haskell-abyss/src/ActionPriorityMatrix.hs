@@ -6,7 +6,7 @@ import           Data.Coerce          (coerce)
 import           Data.Function        (on)
 import           Data.Functor.Classes (Eq1, eq1)
 import           Data.Maybe           (isNothing)
-import qualified Data.Text            as T (Text, find)
+import qualified Data.Text            as T (Text, dropWhile, dropWhileEnd, find)
 import           Data.Tree            (Tree (..))
 import           Data.Vector          (Vector)
 import           GHC.Generics         (Generic)
@@ -21,7 +21,7 @@ runName = coerce
 
 getName :: T.Text -> Maybe Name
 getName s
-  | isNothing $ T.find (== '\n') s = Just $ Name s
+  | isNothing $ T.find (== '\n') s = Just . Name . T.dropWhileEnd (== ' ') $ T.dropWhile (== ' ') s
   | otherwise     = Nothing
 
 newtype Impact = Impact Float deriving (Eq, Ord, Show)
