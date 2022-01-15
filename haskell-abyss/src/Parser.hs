@@ -49,3 +49,6 @@ hsymbol p = do
   a <- p
   hspace
   pure a
+
+comma :: Parser ()
+comma = void . hsymbol $ char ','
