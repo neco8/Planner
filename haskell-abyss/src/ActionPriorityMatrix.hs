@@ -2,17 +2,27 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 module ActionPriorityMatrix where
-import           Data.Coerce          (coerce)
-import           Data.Function        (on)
-import           Data.Functor.Classes (Eq1, eq1)
-import           Data.Maybe           (isNothing)
-import qualified Data.Text            as T (Text, dropWhile, dropWhileEnd, find)
-import           Data.Tree            (Tree (..))
-import           Data.Vector          (Vector)
-import           GHC.Generics         (Generic)
-import           Lens.Micro           ((%~), (&))
-import           Lens.Micro.TH        (makeLenses)
-import           QuickWinAnalysis     (QuickWinAnalysis)
+import           Data.Coerce                (coerce)
+import           Data.Function              (on)
+import           Data.Functor               (void)
+import           Data.Functor.Classes       (Eq1, eq1)
+import           Data.Maybe                 (isNothing)
+import           Data.Proxy                 (Proxy (..))
+import           Data.String                (fromString)
+import qualified Data.Text                  as T (Text, dropWhile, dropWhileEnd,
+                                                  find)
+import           Data.Tree                  (Tree (..))
+import           Data.Vector                (Vector, fromList)
+import           GHC.Generics               (Generic)
+import           Lens.Micro                 ((%~), (&))
+import           Lens.Micro.TH              (makeLenses)
+import           Parser                     (Parser, comma, parserFromMaybe,
+                                             scn, separatedParser)
+import           QuickWinAnalysis           (QuickWinAnalysis)
+import           Text.Megaparsec            (anySingleBut, satisfy, some)
+import           Text.Megaparsec.Char       (char, newline)
+import qualified Text.Megaparsec.Char.Lexer as L (IndentOpt (..), float,
+                                                  indentBlock)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
@@ -44,7 +54,7 @@ getEffort n
   | n > 0 && n <= 10 = Just $ Effort n
   | otherwise = Nothing
 
-data ActionPriorityMatrix qwa = ActionPriorityMatrix
+data ActionPriorityMatrix qwa = APM
   { _name   :: Name
   , _impact :: Impact
   , _effort :: Effort
@@ -79,8 +89,23 @@ instance Eq qwa => Ord (ActionPriorityMatrix qwa) where
 
 -- parser
 
--- test
+nameParser :: Parser Name
+nameParser = parserFromMaybe "fail with ActionPriorityMatrix name parser." $
+  getName <$> separatedParser
 
-apm = ActionPriorityMatrix (Name "name1") (Impact 10.0) (Effort 0.0) ["string"]
-apm1 = ActionPriorityMatrix (Name "name1") (Impact 10.0) (Effort 10.0) ["string"]
-apm2 = ActionPriorityMatrix (Name "name2") (Impact 5.0) (Effort 0.0) ["string"]
+impactParser :: Parser Impact
+impactParser = parserFromMaybe "fail with ActionPriorityMatrix impact parser." $
+  getImpact <$> L.float
+
+effortParser :: Parser Effort
+effortParser = parserFromMaybe "fail with ActionPriorityMatrix effort parser." $
+  getEffort <$> L.float
+
+apmParser :: Parser qwa -> Parser (ActionPriorityMatrix qwa)
+apmParser pqwa = L.indentBlock scn $ do
+  name <- nameParser
+  comma
+  impact <- impactParser
+  comma
+  effort <- effortParser
+  pure $ L.IndentMany Nothing (pure . APM name impact effort . fromList) pqwa
