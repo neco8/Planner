@@ -27,6 +27,9 @@ dependencies:
 - microlens-th
 - text
 - vector
+- optparse-declarative
+- barbies
+- barbies-th
 
 library:
   source-dirs: src
@@ -43,12 +46,13 @@ executables:
     - Planner
 
 tests:
-  Planner-test:
-    main:                Spec.hs
-    source-dirs:         test
+  Planner-tasty:
+    main: Tasty.hs
+    source-dirs: test-tasty
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - Planner
+    - tasty
