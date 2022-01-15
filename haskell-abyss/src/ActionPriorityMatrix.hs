@@ -6,7 +6,6 @@ import           Data.Coerce          (coerce)
 import           Data.Function        (on)
 import           Data.Functor.Classes (Eq1, eq1)
 import           Data.Maybe           (isNothing)
-import           Data.String          (IsString, fromString)
 import qualified Data.Text            as T (Text, find)
 import           Data.Tree            (Tree (..))
 import           Data.Vector          (Vector)
@@ -16,9 +15,6 @@ import           Lens.Micro.TH        (makeLenses)
 import           QuickWinAnalysis     (QuickWinAnalysis)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
-
-instance IsString Name where
-  fromString = Name . fromString
 
 runName :: Name -> T.Text
 runName = coerce

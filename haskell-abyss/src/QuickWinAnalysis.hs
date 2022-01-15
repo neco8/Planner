@@ -2,13 +2,9 @@
 module QuickWinAnalysis where
 import           Data.Coerce (coerce)
 import           Data.Maybe  (isNothing)
-import           Data.String (IsString, fromString)
 import qualified Data.Text   as T (Text, find)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
-
-instance IsString Name where
-  fromString = Name . fromString
 
 runName :: Name -> T.Text
 runName = coerce
