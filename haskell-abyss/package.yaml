@@ -56,3 +56,5 @@ tests:
     dependencies:
     - Planner
     - tasty
+    - hspec-megaparsec
+    - QuickCheck
