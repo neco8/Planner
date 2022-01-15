@@ -56,7 +56,7 @@ data ActionPriorityMatrix qwa = ActionPriorityMatrix
   } deriving (Eq, Show)
 makeLenses ''ActionPriorityMatrix
 
--- calc distance from greatest APM
+-- APM's criterion
 
 greatestImpact :: Impact
 greatestImpact = Impact 10.0
@@ -80,6 +80,10 @@ apmToCriterion apm
 
 instance Eq qwa => Ord (ActionPriorityMatrix qwa) where
   compare = compare `on` apmToCriterion
+
+-- parser
+
+-- test
 
 apm = ActionPriorityMatrix (Name "name1") (Impact 10.0) (Effort 0.0) ["string"]
 apm1 = ActionPriorityMatrix (Name "name1") (Impact 10.0) (Effort 10.0) ["string"]
