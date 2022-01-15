@@ -1,11 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Parser where
+import           Control.Arrow              ((&&&))
 import           Data.Functor               (void)
 import           Data.Functor.Identity      (Identity)
+import           Data.String                (fromString)
 import           Data.Text                  (Text)
 import           Data.Tree                  (Tree (..))
 import           Data.Void                  (Void)
-import           Text.Megaparsec            (ParsecT, empty, some, (<|>))
+import           Text.Megaparsec            (ParsecT, empty, satisfy, some,
+                                             (<|>))
 import           Text.Megaparsec.Char       (char, space1, tab)
 import qualified Text.Megaparsec.Char.Lexer as L (IndentOpt (..), float,
                                                   indentBlock, space)
@@ -29,3 +32,6 @@ treeParser :: Parser s -> Parser (Tree s)
 treeParser p = L.indentBlock scn $ do
   s <- p
   pure $ L.IndentMany Nothing (pure . Node s) $ treeParser p
+
+separatedParser :: Parser Text
+separatedParser = fromString <$> some (satisfy (uncurry (&&) . ((/= '\n') &&& (/= ','))))
