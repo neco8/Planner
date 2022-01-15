@@ -8,7 +8,10 @@ import           Parser               (Parser)
 import           Text.Megaparsec      (choice, try, (<|>))
 import           Text.Megaparsec.Char (char, string)
 
-data Todo s = Todo Bool s deriving (Eq, Ord, Show)
+data Todo s = Todo
+  { _isDone  :: Bool
+  , _content :: s
+  } deriving (Eq, Ord, Show)
 
 instance PPrint s => PPrint (Todo s) where
   pprint =
