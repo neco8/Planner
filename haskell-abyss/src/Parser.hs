@@ -9,7 +9,7 @@ import           Data.Tree                  (Tree (..))
 import           Data.Void                  (Void)
 import           Text.Megaparsec            (ParsecT, empty, satisfy, some,
                                              (<|>))
-import           Text.Megaparsec.Char       (char, space1, tab)
+import           Text.Megaparsec.Char       (char, hspace, space, space1, tab)
 import qualified Text.Megaparsec.Char.Lexer as L (IndentOpt (..), float,
                                                   indentBlock, space)
 
@@ -35,3 +35,17 @@ treeParser p = L.indentBlock scn $ do
 
 separatedParser :: Parser Text
 separatedParser = fromString <$> some (satisfy (uncurry (&&) . ((/= '\n') &&& (/= ','))))
+
+symbol :: Parser a -> Parser a
+symbol p = do
+  space
+  a <- p
+  space
+  pure a
+
+hsymbol :: Parser a -> Parser a
+hsymbol p = do
+  hspace
+  a <- p
+  hspace
+  pure a
