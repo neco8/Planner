@@ -10,14 +10,17 @@ import           Data.Maybe                 (isNothing)
 import           Data.Proxy                 (Proxy (..))
 import           Data.String                (fromString)
 import qualified Data.Text                  as T (Text, dropWhile, dropWhileEnd,
-                                                  find)
+                                                  find, intercalate, lines)
 import           Data.Tree                  (Tree (..))
-import           Data.Vector                (Vector, fromList)
+import           Data.Vector                (Vector, concatMap, fromList,
+                                             toList)
 import           GHC.Generics               (Generic)
 import           Lens.Micro                 ((%~), (&))
 import           Lens.Micro.TH              (makeLenses)
+import           PPrint                     (PPrint, pprint)
 import           Parser                     (Parser, comma, parserFromMaybe,
                                              scn, separatedParser)
+import           Prelude                    hiding (concatMap)
 import           QuickWinAnalysis           (QuickWinAnalysis)
 import           Text.Megaparsec            (anySingleBut, satisfy, some)
 import           Text.Megaparsec.Char       (char, newline)
@@ -62,8 +65,6 @@ data ActionPriorityMatrix qwa = APM
   } deriving (Eq, Show)
 makeLenses ''ActionPriorityMatrix
 
--- APM's criterion
-
 greatestImpact :: Impact
 greatestImpact = Impact 10.0
 
@@ -86,6 +87,16 @@ apmToCriterion apm
 
 instance Eq qwa => Ord (ActionPriorityMatrix qwa) where
   compare = compare `on` apmToCriterion
+
+instance PPrint qwa => PPrint (ActionPriorityMatrix qwa) where
+  pprint apm =
+    runName (_name apm) <>
+    "," <>
+    pprint (runImpact (_impact apm)) <>
+    "," <>
+    pprint (runEffort (_effort apm)) <>
+    "\n" <>
+    T.intercalate "\n" (toList (("  " <>) <$> concatMap (fromList . T.lines . pprint) (_qwas apm)))
 
 -- parser
 

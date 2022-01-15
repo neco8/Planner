@@ -1,9 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module QuickWinAnalysis where
 import           Data.Coerce                (coerce)
 import           Data.Maybe                 (isNothing)
 import qualified Data.Text                  as T (Text, dropWhile, dropWhileEnd,
                                                   find)
+import           Lens.Micro.TH              (makeLenses)
+import           PPrint                     (PPrint (pprint))
 import           Parser                     (Parser, comma, parserFromMaybe,
                                              separatedParser)
 import qualified Text.Megaparsec.Char.Lexer as L (float)
@@ -43,9 +46,18 @@ data QuickWinAnalysis = QWA
   , _easeOfImplement :: EaseOfImplement
   , _impact          :: Impact
   } deriving (Eq, Show)
+makeLenses ''QuickWinAnalysis
 
 instance Ord QuickWinAnalysis where
   a `compare` b = qwaToCriterion a `compare` qwaToCriterion b
+
+instance PPrint QuickWinAnalysis where
+  pprint qwa =
+    runName (_name qwa) <>
+    "," <>
+    pprint (runEaseOfImplement (_easeOfImplement qwa)) <>
+    "," <>
+    pprint (runImpact (_impact qwa))
 
 qwaToCriterion :: QuickWinAnalysis -> (Float, EaseOfImplement, Impact)
 qwaToCriterion qwa =

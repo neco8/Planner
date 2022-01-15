@@ -20,3 +20,6 @@ instance PPrint Float where
     case (numerator &&& denominator) $ toRational f of
       (a, 1) -> fromString $ show a
       _      -> fromString $ show f
+
+instance PPrint T.Text where
+  pprint = id
