@@ -27,6 +27,7 @@ library
   exposed-modules:
       ActionPriorityMatrix
       Lib
+      Parser
       PPrint
       QuickWinAnalysis
       Todo
