@@ -8,6 +8,7 @@ import           Data.Functor               (void)
 import           Data.Functor.Classes       (Eq1, eq1)
 import           Data.Maybe                 (isNothing)
 import           Data.Proxy                 (Proxy (..))
+import           Data.Scientific            (toRealFloat)
 import           Data.String                (fromString)
 import qualified Data.Text                  as T (Text, dropWhile, dropWhileEnd,
                                                   find, intercalate, lines)
@@ -24,8 +25,8 @@ import           Prelude                    hiding (concatMap)
 import           QuickWinAnalysis           (QuickWinAnalysis)
 import           Text.Megaparsec            (anySingleBut, satisfy, some)
 import           Text.Megaparsec.Char       (char, newline)
-import qualified Text.Megaparsec.Char.Lexer as L (IndentOpt (..), float,
-                                                  indentBlock)
+import qualified Text.Megaparsec.Char.Lexer as L (IndentOpt (..), indentBlock,
+                                                  scientific)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
@@ -90,13 +91,17 @@ instance Eq qwa => Ord (ActionPriorityMatrix qwa) where
 
 instance PPrint qwa => PPrint (ActionPriorityMatrix qwa) where
   pprint apm =
-    runName (_name apm) <>
-    "," <>
-    pprint (runImpact (_impact apm)) <>
-    "," <>
-    pprint (runEffort (_effort apm)) <>
-    "\n" <>
-    T.intercalate "\n" (toList (("  " <>) <$> concatMap (fromList . T.lines . pprint) (_qwas apm)))
+    join "\n"
+    (runName (_name apm) <>
+      "," <>
+      pprint (runImpact (_impact apm)) <>
+      "," <>
+      pprint (runEffort (_effort apm)))
+    (T.intercalate "\n" (toList (("  " <>) <$> concatMap (fromList . T.lines . pprint) (_qwas apm))))
+    where
+      join joiner a b
+        | a /= mempty && b /= mempty = a <> joiner <> b
+        | otherwise = a <> b
 
 -- parser
 
@@ -106,11 +111,11 @@ nameParser = parserFromMaybe "fail with ActionPriorityMatrix name parser." $
 
 impactParser :: Parser Impact
 impactParser = parserFromMaybe "fail with ActionPriorityMatrix impact parser." $
-  getImpact <$> L.float
+  getImpact . toRealFloat <$> L.scientific
 
 effortParser :: Parser Effort
 effortParser = parserFromMaybe "fail with ActionPriorityMatrix effort parser." $
-  getEffort <$> L.float
+  getEffort . toRealFloat <$> L.scientific
 
 apmParser :: Parser qwa -> Parser (ActionPriorityMatrix qwa)
 apmParser pqwa = L.indentBlock scn $ do
