@@ -38,6 +38,17 @@ packages:
 extra-deps:
   - barbies-th-0.1.9@sha256:a104bf15afcc88d229400314201fa33cd0c92e0300740791dc1c092c8e0f3246,1608
   - optparse-declarative-0.4.2@sha256:2054a1489442744f1c93b7994a9d5600fc51a513290d9c27631aef24ffbddf21,1003
+  - Chart-diagrams-1.9.3@sha256:63668daff044a79827b7edb265265a4a8237424abb8f808ad1fcbdb3d47e753d,1801
+  - SVGFonts-1.7.0.1@sha256:1aac5ffd1a7c09317f92e9d31380d61eb96ce412b0dbd4e2d22c609c3d0be360,4039
+  - diagrams-core-1.5.0@sha256:8ffd24eb97ce309b41c52e5fa3a8acee5e4063565919eb4d41abb5c219b3d49b,2971
+  - diagrams-lib-1.4.5.1@sha256:b6a27de84eb65c4b4baac668e82c648f7db83210d5a863ac787fb6fa9e56177b,8233
+  - diagrams-postscript-1.5.1@sha256:f1bd02682105abd7e45f1e70ca24f8fe68b12340ebf026788d3349502b3faf71,2332
+  - diagrams-svg-1.4.3.1@sha256:b3944d39ecdfd60b9771f28e1312ca1467c79c8388aac2243210aeac8574d614,3117
+  - svg-builder-0.1.1@sha256:825ebc18c4e457efa1bc6ca5f90f5abc80566992e8ffdab6ccb782407a46db32,1569
+  - active-0.2.0.15@sha256:56d95c2205a8e52911bf08784b9958be430036e6ea16521b957c3e27cc71235c,1792
+  - dual-tree-0.2.3.0@sha256:be4b8ecb2ecef798f88ee569d043f3f19c32f6dd083329cd7cfcb482f0bc6233,2882
+  - monoid-extras-0.6.1@sha256:294eaeb51e0d047500119131f133bc4a7988f330baa4bb20256995aae3385b33,2220
+  - statestack-0.3@sha256:437941f253bc7a6d8321e67938667bae53d7765b256a45976accadd85f6e1703,1146
 # - acme-missiles-0.3
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
@@ -67,3 +78,4 @@ extra-deps:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+allow-newer: true

@@ -31,6 +31,8 @@ dependencies:
 - barbies
 - barbies-th
 - scientific
+- Chart
+- Chart-diagrams
 
 library:
   source-dirs: src

@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       ActionPriorityMatrix
+      Chart
       Parser
       PPrint
       QuickWinAnalysis
@@ -35,7 +36,9 @@ library
   hs-source-dirs:
       src
   build-depends:
-      barbies
+      Chart
+    , Chart-diagrams
+    , barbies
     , barbies-th
     , base >=4.7 && <5
     , containers
@@ -56,7 +59,9 @@ executable Planner-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      Planner
+      Chart
+    , Chart-diagrams
+    , Planner
     , barbies
     , barbies-th
     , base >=4.7 && <5
@@ -79,7 +84,9 @@ test-suite Planner-tasty
       test-tasty
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      Planner
+      Chart
+    , Chart-diagrams
+    , Planner
     , QuickCheck
     , barbies
     , barbies-th
