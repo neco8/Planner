@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 module Main where
-import           ActionPriorityMatrix   (ActionPriorityMatrix, apmParser, qwas)
+import           ActionPriorityMatrix   (ActionPriorityMatrix,
+                                         MDActionPriorityMatrix (..), apmParser,
+                                         qwas)
 import           Chart                  (getChart)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Foldable          (all)
@@ -41,13 +43,13 @@ compile iPath oPath isVsCode chartPath = do
   liftIO $ case parse (some $ apmParser (treeParser (wrapTodo <$> todoParser qwaParser)) <* optional newline) "" i of
     Left err -> putStrLn $ errorBundlePretty err
     Right as -> do
-      let apms = sortAPM <$> L.sort as
-      output . pprint $ apms
+      let apms = sortTodoQWA <$> L.sort as
+      output . pprint $ MDAPM <$> apms
       chart apms
 
 
-sortAPM :: (Ord t, IsTodo t) => ActionPriorityMatrix (Tree t) -> ActionPriorityMatrix (Tree t)
-sortAPM =
+sortTodoQWA :: (Ord t, IsTodo t) => ActionPriorityMatrix (Tree t) -> ActionPriorityMatrix (Tree t)
+sortTodoQWA =
   qwas %~ uncurry (<>) . partition (not . all (^. to isDone)) . sort
 
 sort :: Ord a => Vector a -> Vector a

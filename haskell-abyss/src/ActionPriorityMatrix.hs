@@ -23,8 +23,8 @@ import           Parser                     (Parser, comma, parserFromMaybe,
                                              scn, separatedParser)
 import           Prelude                    hiding (concatMap)
 import           QuickWinAnalysis           (QuickWinAnalysis)
-import           Text.Megaparsec            (anySingleBut, satisfy, some)
-import           Text.Megaparsec.Char       (char, newline)
+import           Text.Megaparsec            (anySingleBut, satisfy, some, try)
+import           Text.Megaparsec.Char       (char, newline, string)
 import qualified Text.Megaparsec.Char.Lexer as L (IndentOpt (..), indentBlock,
                                                   scientific)
 
@@ -37,6 +37,9 @@ getName :: T.Text -> Maybe Name
 getName s
   | isNothing $ T.find (== '\n') s = Just . Name . T.dropWhileEnd (== ' ') $ T.dropWhile (== ' ') s
   | otherwise     = Nothing
+
+instance PPrint Name where
+  pprint (Name name) = name
 
 newtype Impact = Impact Float deriving (Eq, Ord, Show)
 
@@ -92,7 +95,7 @@ instance Eq qwa => Ord (ActionPriorityMatrix qwa) where
 instance PPrint qwa => PPrint (ActionPriorityMatrix qwa) where
   pprint apm =
     join "\n"
-    (runName (_name apm) <>
+    (pprint (_name apm) <>
       "," <>
       pprint (runImpact (_impact apm)) <>
       "," <>
@@ -102,6 +105,12 @@ instance PPrint qwa => PPrint (ActionPriorityMatrix qwa) where
       join joiner a b
         | a /= mempty && b /= mempty = a <> joiner <> b
         | otherwise = a <> b
+
+newtype MDActionPriorityMatrix qwa = MDAPM (ActionPriorityMatrix qwa)
+
+instance PPrint qwa => PPrint (MDActionPriorityMatrix qwa) where
+  pprint (MDAPM apm) = "- " <> pprint apm
+
 
 -- parser
 
@@ -119,6 +128,7 @@ effortParser = parserFromMaybe "fail with ActionPriorityMatrix effort parser." $
 
 apmParser :: Parser qwa -> Parser (ActionPriorityMatrix qwa)
 apmParser pqwa = L.indentBlock scn $ do
+  try $ string "- "
   name <- nameParser
   comma
   impact <- impactParser
