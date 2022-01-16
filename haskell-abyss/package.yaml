@@ -30,6 +30,7 @@ dependencies:
 - optparse-declarative
 - barbies
 - barbies-th
+- scientific
 
 library:
   source-dirs: src

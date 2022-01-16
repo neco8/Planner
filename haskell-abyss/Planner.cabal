@@ -43,6 +43,7 @@ library
     , microlens
     , microlens-th
     , optparse-declarative
+    , scientific
     , text
     , vector
   default-language: Haskell2010
@@ -64,6 +65,7 @@ executable Planner-exe
     , microlens
     , microlens-th
     , optparse-declarative
+    , scientific
     , text
     , vector
   default-language: Haskell2010
@@ -88,6 +90,7 @@ test-suite Planner-tasty
     , microlens
     , microlens-th
     , optparse-declarative
+    , scientific
     , tasty
     , text
     , vector
