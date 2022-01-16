@@ -4,6 +4,7 @@ import           ActionPriorityMatrix                      (ActionPriorityMatrix
                                                             effort, impact,
                                                             runEffort,
                                                             runImpact)
+import           Data.Text                                 (unpack)
 import           Data.Vector                               (Vector, toList)
 import           Graphics.Rendering.Chart.Backend.Diagrams (toFile)
 import           Graphics.Rendering.Chart.Easy             (Default (def),
@@ -19,6 +20,7 @@ import           Graphics.Rendering.Chart.Easy             (Default (def),
                                                             points, setColors,
                                                             to, vmap, (.=),
                                                             (.~), (^.))
+import           PPrint                                    (pprint)
 
 values :: Monad m => m (ActionPriorityMatrix qwa) -> m (Float, Float)
 values apms = do
@@ -34,13 +36,13 @@ getChart path d = toFile def path $ do
     ((axis_viewport .~ vmap (0, 10)) .
       (axis_grid .~ [0..10]) .
       (axis_ticks .~ ((\n -> (n, if n `elem` bigLabels then 4 else 2)) <$> [0, 0.2..10])) .
-      (axis_labels .~ [(\n -> (n, show n)) <$> [0, 2..10]])
+      (axis_labels .~ [(\n -> (n, unpack $ pprint n)) <$> [0, 2..10]])
     )
   layout_y_axis . laxis_override .=
     ((axis_viewport .~ vmap (0, 10)) .
       (axis_grid .~ [0..10]) .
       (axis_ticks .~ ((\n -> (n, if n `elem` bigLabels then 4 else 2)) <$> [0, 0.2..10]))) .
-      (axis_labels .~ [(\n -> (n, show n)) <$> [0, 2..10]])
+      (axis_labels .~ [(\n -> (n, unpack $ pprint n)) <$> [0, 2..10]])
   plot $ points "Action Priority Matrix" $ values d
   where
     bigLabels = [0.0, 2.0..10.0]
