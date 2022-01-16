@@ -30,3 +30,8 @@ instance PPrint s => PPrint (Vector s) where
 
 instance PPrint s => PPrint [s] where
   pprint ts = foldMap (<> "\n") $ pprint <$> ts
+
+instance (PPrint a, PPrint b) => PPrint (Either a b) where
+  pprint e = case e of
+    Right a -> pprint a
+    Left b  -> pprint b

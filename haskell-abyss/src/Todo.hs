@@ -41,6 +41,11 @@ showDoneWith :: PPrint s => (Bool -> Text) -> Todo s -> Text
 showDoneWith f (Todo b s) =
   f b <> pprint s
 
+instance (IsTodo a, IsTodo b) => IsTodo (Either a b) where
+  isDone e = case e of
+    Right a -> isDone a
+    Left b  -> isDone b
+
 -- parser
 
 todoParser_ :: Vector (Parser Bool) -> Parser s -> Parser (Todo s)
