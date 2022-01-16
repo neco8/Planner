@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Todo (Todo (..), todoParser) where
+{-# LANGUAGE TemplateHaskell   #-}
+module Todo (Todo (..), todoParser, isDone, content) where
 import           Data.Functor         ((<$))
 import           Data.Vector          (Vector)
+import           Lens.Micro.TH        (makeLenses)
 import           PPrint               (PPrint, pprint)
 import           Parser               (Parser)
 import           Text.Megaparsec      (choice, try, (<|>))
@@ -12,6 +14,7 @@ data Todo s = Todo
   { _isDone  :: Bool
   , _content :: s
   } deriving (Eq, Ord, Show)
+makeLenses ''Todo
 
 instance PPrint s => PPrint (Todo s) where
   pprint =
