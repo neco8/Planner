@@ -3,13 +3,15 @@
 module QuickWinAnalysis where
 import           Data.Coerce                (coerce)
 import           Data.Maybe                 (isNothing)
+import           Data.Ord                   (Down (..))
+import           Data.Scientific            (toRealFloat)
 import qualified Data.Text                  as T (Text, dropWhile, dropWhileEnd,
                                                   find)
 import           Lens.Micro.TH              (makeLenses)
 import           PPrint                     (PPrint (pprint))
 import           Parser                     (Parser, comma, parserFromMaybe,
                                              separatedParser)
-import qualified Text.Megaparsec.Char.Lexer as L (float)
+import qualified Text.Megaparsec.Char.Lexer as L (scientific)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
@@ -59,9 +61,9 @@ instance PPrint QuickWinAnalysis where
     "," <>
     pprint (runImpact (_impact qwa))
 
-qwaToCriterion :: QuickWinAnalysis -> (Float, EaseOfImplement, Impact)
+qwaToCriterion :: QuickWinAnalysis -> Down (Float, EaseOfImplement, Impact)
 qwaToCriterion qwa =
-  (runEaseOfImplement (_easeOfImplement qwa) * runImpact (_impact qwa), _easeOfImplement qwa, _impact qwa)
+  Down (runEaseOfImplement (_easeOfImplement qwa) * runImpact (_impact qwa), _easeOfImplement qwa, _impact qwa)
 
 -- parser
 
@@ -71,11 +73,11 @@ nameParser = parserFromMaybe "fail with QuickWinAnalysis name parser." $
 
 easeOfImplementParser :: Parser EaseOfImplement
 easeOfImplementParser = parserFromMaybe "fail with QuickWinAnalysis ease of implement parser." $
-  getEaseOfImplement <$> L.float
+  getEaseOfImplement . toRealFloat <$> L.scientific
 
 impactParser :: Parser Impact
 impactParser = parserFromMaybe "fail with QuickWinAnalysis impact parser." $
-  getImpact <$> L.float
+  getImpact . toRealFloat <$> L.scientific
 
 qwaParser :: Parser QuickWinAnalysis
 qwaParser = do
