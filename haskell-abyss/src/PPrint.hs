@@ -7,6 +7,7 @@ import           Data.Ratio    (denominator, numerator)
 import           Data.String   (IsString (fromString))
 import qualified Data.Text     as T (Text, intercalate, lines)
 import           Data.Tree     (Tree (rootLabel, subForest))
+import           Data.Vector   (Vector)
 
 class PPrint a where
   pprint :: a -> T.Text
@@ -23,3 +24,9 @@ instance PPrint Float where
 
 instance PPrint T.Text where
   pprint = id
+
+instance PPrint s => PPrint (Vector s) where
+  pprint ts = foldMap (<> "\n") $ pprint <$> ts
+
+instance PPrint s => PPrint [s] where
+  pprint ts = foldMap (<> "\n") $ pprint <$> ts
