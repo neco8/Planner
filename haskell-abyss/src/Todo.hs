@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
-module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..)) where
+module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo) where
 import           Data.Functor         ((<$))
 import           Data.Text            (Text)
 import           Data.Vector          (Vector)
+import           Lens.Micro           ((^.))
 import           Lens.Micro.TH        (makeLenses)
 import           PPrint               (PPrint, pprint)
 import           Parser               (Parser)
@@ -12,16 +13,25 @@ import           Text.Megaparsec      (choice, try, (<|>))
 import           Text.Megaparsec.Char (char, string)
 
 data Todo s = Todo
-  { _isDone  :: Bool
-  , _content :: s
+  { _isTodoDone :: Bool
+  , _content    :: s
   } deriving (Eq, Ord, Show)
 makeLenses ''Todo
+
+class IsTodo t where
+  isDone :: t -> Bool
+
+instance IsTodo (Todo s) where
+  isDone = (^. isTodoDone)
 
 instance PPrint s => PPrint (Todo s) where
   pprint =
     showDoneWith $ \b -> "- [" <> (if b then "x" else " ") <> "] "
 
 newtype VsCodeTodo s = VsCodeTodo (Todo s) deriving (Eq, Ord, Show)
+
+instance IsTodo (VsCodeTodo s) where
+  isDone (VsCodeTodo todo) = isDone todo
 
 instance PPrint s => PPrint (VsCodeTodo s) where
   pprint (VsCodeTodo todo) =
