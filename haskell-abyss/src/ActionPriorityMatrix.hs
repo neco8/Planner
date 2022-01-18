@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -77,7 +78,7 @@ data ActionPriorityMatrix qwa = APM
     _tags   :: Vector Tag,
     _qwas   :: Vector qwa
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Functor)
 
 makeLenses ''ActionPriorityMatrix
 
