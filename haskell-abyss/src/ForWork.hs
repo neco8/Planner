@@ -3,6 +3,7 @@ module ForWork where
 
 import qualified ActionPriorityMatrix as APM (ActionPriorityMatrix, Tag (..),
                                               name, qwas, tags)
+import           Data.Maybe           (fromMaybe)
 import qualified Data.Text            as T (Text, intercalate, lines, pack,
                                             unpack)
 import           Data.Tree            (Tree)
@@ -40,10 +41,12 @@ instance PPrint ForWorkQuickWinAnalysis where
   pprint (ForWorkQWA qwa) =
     pprint $ qwa ^. QWA.name
 
-changeFilePathForWork :: FilePath -> Maybe FilePath
-changeFilePathForWork f = do
+type Suffix = T.Text
+
+changeFilePathForWork :: Maybe Suffix -> FilePath -> Maybe FilePath
+changeFilePathForWork suffix f = do
   (name, dotextension) <- parseMaybe parser $ fromString f
-  pure . T.unpack $ name <> "_work" <> dotextension
+  pure . T.unpack $ name <> fromMaybe "_work" suffix <> dotextension
   where
     parser :: Parser (T.Text, T.Text)
     parser = do

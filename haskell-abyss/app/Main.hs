@@ -40,7 +40,8 @@ data Argument = Argument
     _output            :: Maybe OutputPath,
     _inputOutput       :: Maybe InputOutputPath,
     _isVsCodeTodoStyle :: IsVsCodeTodoStyle,
-    _chartPath         :: Maybe ChartPath
+    _chartPath         :: Maybe ChartPath,
+    _forWorkSuffix     :: Maybe ForWorkSuffix
   }
 
 newtype InputPath = InputPath FilePath
@@ -53,14 +54,25 @@ newtype IsVsCodeTodoStyle = IsVsCodeTodoStyle Bool
 
 newtype ChartPath = ChartPath FilePath
 
+newtype ForWorkSuffix = ForWorkSuffix Text
+
 compile ::
   Flag "i" '["input"] "FILE_PATH" "input file path" (Maybe FilePath) ->
   Flag "o" '["output"] "FILE_PATH" "output file path" (Maybe FilePath) ->
   Flag "" '["vscode"] "" "vscode todo style" Bool ->
   Flag "" '["chart"] "FILE_PATH" "chart file path" (Maybe FilePath) ->
+  Flag "" '["work-suffix"] "FOR_WORK_FILE_SUFFIX" "for work generation suffix" (Maybe String) ->
   Arg "input-output" (Maybe FilePath) ->
   Cmd "compile command" ()
-compile iPath oPath isVsCode chartPath ioPath = liftIO $ compile' $ Argument (InputPath <$> get iPath) (OutputPath <$> get oPath) (InputOutputPath <$> get ioPath) (IsVsCodeTodoStyle $ get isVsCode) (ChartPath <$> get chartPath)
+compile iPath oPath isVsCode chartPath forWorkS ioPath =
+  liftIO $ compile' $
+    Argument
+      (InputPath <$> get iPath)
+      (OutputPath <$> get oPath)
+      (InputOutputPath <$> get ioPath)
+      (IsVsCodeTodoStyle $ get isVsCode)
+      (ChartPath <$> get chartPath)
+      (ForWorkSuffix . pack <$> get forWorkS)
 
 compile' :: Argument -> IO ()
 compile' Argument {..} = do
@@ -68,7 +80,7 @@ compile' Argument {..} = do
       output = maybe (putStrLn . unpack) ((. unpack) . writeFile) (coerce _inputOutput <|> coerce _output)
       outputForWork apms = fromMaybe (pure ()) $ do
         path <- coerce _inputOutput <|> coerce _output
-        forWorkPath <- changeFilePathForWork path
+        forWorkPath <- changeFilePathForWork (coerce _forWorkSuffix) path
         pure $ writeFile forWorkPath . unpack . pprint $ ForWorkAPM <$> apms
       chart = maybe (const $ pure ()) getChart (coerce _chartPath)
       wrapTodo
