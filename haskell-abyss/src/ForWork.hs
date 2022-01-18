@@ -1,14 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 module ForWork where
 
-import qualified ActionPriorityMatrix as APM
-import qualified Data.Text            as T
-import           Data.Tree
-import qualified Data.Vector          as V
+import qualified ActionPriorityMatrix as APM (ActionPriorityMatrix, Tag (..),
+                                              name, qwas, tags)
+import qualified Data.Text            as T (Text, intercalate, lines, pack,
+                                            unpack)
+import           Data.Tree            (Tree)
+import           GHC.Exts             (IsString (fromString))
 import           Lens.Micro           (to, (^.))
-import           PPrint
-import qualified QuickWinAnalysis     as QWA
-import           Todo
+import           PPrint               (PPrint (..))
+import           Parser               (Parser)
+import qualified QuickWinAnalysis     as QWA (QuickWinAnalysis, name)
+import           Text.Megaparsec      (anySingle, many, manyTill_, parseMaybe,
+                                       satisfy, some)
+import           Text.Megaparsec.Char (char)
+import           Todo                 (Todo)
 
 work :: APM.Tag
 work = APM.Tag "work"
@@ -33,3 +39,16 @@ newtype ForWorkQuickWinAnalysis = ForWorkQWA QWA.QuickWinAnalysis
 instance PPrint ForWorkQuickWinAnalysis where
   pprint (ForWorkQWA qwa) =
     pprint $ qwa ^. QWA.name
+
+changeFilePathForWork :: FilePath -> Maybe FilePath
+changeFilePathForWork f = do
+  (name, dotextension) <- parseMaybe parser $ fromString f
+  pure . T.unpack $ name <> "_work" <> dotextension
+  where
+    parser :: Parser (T.Text, T.Text)
+    parser = do
+      (name, dotextension) <- manyTill_ anySingle $ do
+        dot <- char '.'
+        cs <- some $ satisfy (\s -> s /= ' ' && s /= '.')
+        pure $ T.pack $ dot : cs
+      pure (T.pack name, dotextension)
