@@ -10,11 +10,11 @@ import           Data.Functor           (void)
 import qualified Data.List              as L (sort)
 import           Data.Maybe             (fromMaybe, maybe)
 import           Data.Text              (Text, pack, unpack)
-import           Data.Tree              (Tree)
+import           Data.Tree              (Tree (Node, rootLabel, subForest))
 import           Data.Vector            (Vector, fromList, partition, toList)
 import           ForWork                (ForWorkActionPriorityMatrix (..),
                                          changeFilePathForWork)
-import           Lens.Micro             (to, (%~), (^.))
+import           Lens.Micro             (mapped, sets, to, (%~), (^.))
 import           Options.Declarative    (Cmd, Flag, Option (get), run)
 import           PPrint                 (PPrint (pprint))
 import           Parser                 (treeParser)
@@ -49,15 +49,15 @@ compile iPath oPath isVsCode chartPath = do
   liftIO $ case parse (some $ apmParser (treeParser (todoParser qwaParser)) <* optional newline) "" i of
     Left err -> putStrLn $ errorBundlePretty err
     Right as -> do
-      let apms = sortTodoQWA <$> L.sort as
+      let apms = (qwas %~ sortTodoQWA) <$> L.sort as
       output . pprint $ MDAPM . fmap (fmap wrapTodo) <$> apms
       outputForWork apms
       chart apms
 
 
-sortTodoQWA :: (Ord t, IsTodo t) => ActionPriorityMatrix (Tree t) -> ActionPriorityMatrix (Tree t)
+sortTodoQWA :: (Ord t, IsTodo t) => Vector (Tree t) -> Vector (Tree t)
 sortTodoQWA =
-  qwas %~ uncurry (<>) . partition (not . all (^. to isDone)) . sort
+  uncurry (<>) . partition (not . all (^. to isDone)) . sort . (mapped . sets (\f s -> Node (rootLabel s) $ f $ subForest s) %~ (toList . sortTodoQWA . fromList))
 
 sort :: Ord a => Vector a -> Vector a
 sort = fromList . L.sort . toList
