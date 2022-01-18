@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+
 module ActionPriorityMatrix where
+
 import           Data.Coerce                (coerce)
 import           Data.Function              (on)
 import           Data.Functor               (void)
@@ -16,18 +18,19 @@ import           Data.Tree                  (Tree (..))
 import           Data.Vector                (Vector, concatMap, fromList,
                                              toList)
 import           GHC.Generics               (Generic)
-import           Lens.Micro                 ((%~), (&))
+import           Lens.Micro                 ((%~), (&), (^.))
 import           Lens.Micro.TH              (makeLenses)
 import           PPrint                     (PPrint, pprint)
 import           Parser                     (Parser, comma, parserFromMaybe,
                                              scn, separatedParser)
 import           Prelude                    hiding (concatMap)
 import           QuickWinAnalysis           (QuickWinAnalysis)
-import           Text.Megaparsec            (anySingleBut, optional, satisfy,
-                                             some)
+import           Text.Megaparsec            (anySingleBut, many, optional,
+                                             satisfy, some, takeWhile1P)
 import           Text.Megaparsec.Char       (char, newline, string)
 import qualified Text.Megaparsec.Char.Lexer as L (IndentOpt (..), indentBlock,
                                                   scientific)
+import           Text.Megaparsec.Stream     (Token (..))
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
@@ -37,7 +40,7 @@ runName = coerce
 getName :: T.Text -> Maybe Name
 getName s
   | isNothing $ T.find (== '\n') s = Just . Name . T.dropWhileEnd (== ' ') $ T.dropWhile (== ' ') s
-  | otherwise     = Nothing
+  | otherwise = Nothing
 
 instance PPrint Name where
   pprint (Name name) = name
@@ -62,12 +65,20 @@ getEffort n
   | n > 0 && n <= 10 = Just $ Effort n
   | otherwise = Nothing
 
+newtype Tag = Tag T.Text deriving (Eq, Ord, Show)
+
+instance PPrint Tag where
+  pprint tag = "#" <> coerce tag
+
 data ActionPriorityMatrix qwa = APM
-  { _name   :: Name
-  , _impact :: Impact
-  , _effort :: Effort
-  , _qwas   :: Vector qwa
-  } deriving (Eq, Show)
+  { _name   :: Name,
+    _impact :: Impact,
+    _effort :: Effort,
+    _tags   :: Vector Tag,
+    _qwas   :: Vector qwa
+  }
+  deriving (Eq, Show)
+
 makeLenses ''ActionPriorityMatrix
 
 greatestImpact :: Impact
@@ -77,6 +88,7 @@ greatestEffort :: Effort
 greatestEffort = Effort 0.0
 
 type ImpactRadius = Float
+
 type EffortRadius = Float
 
 type Radius = (ImpactRadius, EffortRadius)
@@ -95,17 +107,25 @@ instance Eq qwa => Ord (ActionPriorityMatrix qwa) where
 
 instance PPrint qwa => PPrint (ActionPriorityMatrix qwa) where
   pprint apm =
-    join "\n"
-    (pprint (_name apm) <>
-      "," <>
-      pprint (runImpact (_impact apm)) <>
-      "," <>
-      pprint (runEffort (_effort apm)))
-    (T.intercalate "\n" (toList (("  " <>) <$> concatMap (fromList . T.lines . pprint) (_qwas apm))))
+    join
+      "\n"
+      ( join
+          " "
+          ( pprint (_name apm)
+              <> ","
+              <> pprint (runImpact (_impact apm))
+              <> ","
+              <> pprint (runEffort (_effort apm))
+          )
+          (pprintTags $ toList $ apm ^. tags)
+      )
+      (T.intercalate "\n" (toList (("  " <>) <$> concatMap (fromList . T.lines . pprint) (_qwas apm))))
     where
       join joiner a b
         | a /= mempty && b /= mempty = a <> joiner <> b
         | otherwise = a <> b
+      pprintTags ts =
+        T.intercalate " " (pprint <$> ts)
 
 newtype MDActionPriorityMatrix qwa = MDAPM (ActionPriorityMatrix qwa)
 
@@ -115,16 +135,24 @@ instance PPrint qwa => PPrint (MDActionPriorityMatrix qwa) where
 -- parser
 
 nameParser :: Parser Name
-nameParser = parserFromMaybe "fail with ActionPriorityMatrix name parser." $
-  getName <$> separatedParser
+nameParser =
+  parserFromMaybe "fail with ActionPriorityMatrix name parser." $
+    getName <$> separatedParser
 
 impactParser :: Parser Impact
-impactParser = parserFromMaybe "fail with ActionPriorityMatrix impact parser." $
-  getImpact . toRealFloat <$> L.scientific
+impactParser =
+  parserFromMaybe "fail with ActionPriorityMatrix impact parser." $
+    getImpact . toRealFloat <$> L.scientific
 
 effortParser :: Parser Effort
-effortParser = parserFromMaybe "fail with ActionPriorityMatrix effort parser." $
-  getEffort . toRealFloat <$> L.scientific
+effortParser =
+  parserFromMaybe "fail with ActionPriorityMatrix effort parser." $
+    getEffort . toRealFloat <$> L.scientific
+
+tagParser :: Parser Tag
+tagParser = do
+  string " #"
+  Tag <$> takeWhile1P Nothing (\a -> a /= ' ' && a /= '\n' && a /= '#')
 
 apmParser :: Parser qwa -> Parser (ActionPriorityMatrix qwa)
 apmParser pqwa = L.indentBlock scn $ do
@@ -134,4 +162,5 @@ apmParser pqwa = L.indentBlock scn $ do
   impact <- impactParser
   comma
   effort <- effortParser
-  pure $ L.IndentMany Nothing (pure . APM name impact effort . fromList) pqwa
+  tags <- fromList <$> many tagParser
+  pure $ L.IndentMany Nothing (pure . APM name impact effort tags . fromList) pqwa
