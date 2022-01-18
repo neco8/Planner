@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -15,7 +16,7 @@ import           Text.Megaparsec.Char (char, string)
 data Todo s = Todo
   { _isTodoDone :: Bool
   , _content    :: s
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Ord, Show, Functor)
 makeLenses ''Todo
 
 class IsTodo t where
