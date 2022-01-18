@@ -8,10 +8,12 @@ import           Control.Monad.IO.Class (liftIO)
 import           Data.Foldable          (all)
 import           Data.Functor           (void)
 import qualified Data.List              as L (sort)
-import           Data.Maybe             (maybe)
+import           Data.Maybe             (fromMaybe, maybe)
 import           Data.Text              (Text, pack, unpack)
 import           Data.Tree              (Tree)
 import           Data.Vector            (Vector, fromList, partition, toList)
+import           ForWork                (ForWorkActionPriorityMatrix (..),
+                                         changeFilePathForWork)
 import           Lens.Micro             (to, (%~), (^.))
 import           Options.Declarative    (Cmd, Flag, Option (get), run)
 import           PPrint                 (PPrint (pprint))
@@ -36,15 +38,20 @@ compile :: Flag "i" '["input"] "FILE_PATH" "input file path" (Maybe FilePath)
 compile iPath oPath isVsCode chartPath = do
   let input = maybe (fmap pack getContents) (fmap pack . readFile) (get iPath)
       output = maybe (putStrLn . unpack) ((. unpack) . writeFile) (get oPath)
+      outputForWork apms = fromMaybe (pure ()) $ do
+        path <- get oPath
+        forWorkPath <- changeFilePathForWork path
+        pure $ writeFile forWorkPath . unpack . pprint $ ForWorkAPM <$> apms
       chart = maybe (const $ pure ()) getChart (get chartPath)
       wrapTodo | get isVsCode = Right . VsCodeTodo
                | otherwise = Left
   i <- liftIO input
-  liftIO $ case parse (some $ apmParser (treeParser (wrapTodo <$> todoParser qwaParser)) <* optional newline) "" i of
+  liftIO $ case parse (some $ apmParser (treeParser (todoParser qwaParser)) <* optional newline) "" i of
     Left err -> putStrLn $ errorBundlePretty err
     Right as -> do
       let apms = sortTodoQWA <$> L.sort as
-      output . pprint $ MDAPM <$> apms
+      output . pprint $ MDAPM . fmap (fmap wrapTodo) <$> apms
+      outputForWork apms
       chart apms
 
 
