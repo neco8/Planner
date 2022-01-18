@@ -23,6 +23,9 @@ getName s
   | isNothing $ T.find (== '\n') s = Just . Name . T.dropWhileEnd (== ' ') $ T.dropWhile (== ' ') s
   | otherwise     = Nothing
 
+instance PPrint Name where
+  pprint name = runName name
+
 newtype EaseOfImplement = EOI Float deriving (Eq, Ord, Show)
 
 runEaseOfImplement :: EaseOfImplement -> Float
