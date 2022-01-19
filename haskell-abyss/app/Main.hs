@@ -31,7 +31,7 @@ import           Todo                   (IsTodo, Todo, VsCodeTodo (..), isDone,
                                          todoParser)
 
 main :: IO ()
-main = run "Planner" (Just "0.0.0") compile
+main = run "Planner" (Just "0.0.1") compile
 
 -- TODO: todo編集用のtui。設定ファイルがあって、それには入力用・保存用のファイルが書いてある。コマンドでも指定可能
 
