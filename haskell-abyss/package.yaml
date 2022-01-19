@@ -21,6 +21,18 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- megaparsec
+- containers
+- microlens
+- microlens-th
+- text
+- vector
+- optparse-declarative
+- barbies
+- barbies-th
+- scientific
+- Chart
+- Chart-diagrams
 
 library:
   source-dirs: src
@@ -37,12 +49,15 @@ executables:
     - Planner
 
 tests:
-  Planner-test:
-    main:                Spec.hs
-    source-dirs:         test
+  Planner-tasty:
+    main: Tasty.hs
+    source-dirs: test-tasty
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - Planner
+    - tasty
+    - hspec-megaparsec
+    - QuickCheck
