@@ -47,6 +47,7 @@ library
     , microlens
     , microlens-th
     , optparse-declarative
+    , replace-megaparsec
     , scientific
     , text
     , vector
@@ -71,6 +72,7 @@ executable Planner-exe
     , microlens
     , microlens-th
     , optparse-declarative
+    , replace-megaparsec
     , scientific
     , text
     , vector
@@ -98,6 +100,7 @@ test-suite Planner-tasty
     , microlens
     , microlens-th
     , optparse-declarative
+    , replace-megaparsec
     , scientific
     , tasty
     , text
