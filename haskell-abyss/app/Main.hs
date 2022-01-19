@@ -22,7 +22,8 @@ import           Data.Vector            (Vector, fromList, partition, toList)
 import           ForWork                (ForWorkActionPriorityMatrix (..),
                                          changeFilePathForWork)
 import           Lens.Micro             (mapped, sets, to, (%~), (^.))
-import           Options.Declarative    (Arg, Cmd, Flag, Option (get), run)
+import           Options.Declarative    (Arg, Cmd, Flag, Group (..),
+                                         Option (get), run, subCmd)
 import           PPrint                 (PPrint (pprint))
 import           Parser                 (treeParser)
 import           Prelude                hiding (getContents, getLine, putStrLn,
@@ -36,7 +37,11 @@ import           Todo                   (IsTodo, Todo, VsCodeTodo (..),
                                          exactTodoParser, isDone, todoParser)
 
 main :: IO ()
-main = run "Planner" (Just "0.0.1") compile
+main = run "Planner" (Just "0.0.1") $
+  Group "Planner program"
+    [ subCmd "compile"  compile
+    , subCmd "function" function
+    ]
 
 -- TODO: todo編集用のtui。設定ファイルがあって、それには入力用・保存用のファイルが書いてある。コマンドでも指定可能
 

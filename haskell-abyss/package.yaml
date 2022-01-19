@@ -39,7 +39,7 @@ library:
   source-dirs: src
 
 executables:
-  Planner-exe:
+  planner:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
