@@ -1,12 +1,14 @@
 {-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
-module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo) where
+module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo, exactTodoParser) where
 import           Data.Functor         ((<$))
 import           Data.Text            (Text)
 import           Data.Vector          (Vector)
-import           Lens.Micro           ((^.))
+import           GHC.Base             (coerce)
+import           Lens.Micro           (Lens', lens, (.~), (^.))
 import           Lens.Micro.TH        (makeLenses)
 import           PPrint               (PPrint, pprint)
 import           Parser               (Parser)
@@ -20,10 +22,10 @@ data Todo s = Todo
 makeLenses ''Todo
 
 class IsTodo t where
-  isDone :: t -> Bool
+  isDone :: Lens' t Bool
 
 instance IsTodo (Todo s) where
-  isDone = (^. isTodoDone)
+  isDone = isTodoDone
 
 instance PPrint s => PPrint (Todo s) where
   pprint =
@@ -32,7 +34,8 @@ instance PPrint s => PPrint (Todo s) where
 newtype VsCodeTodo s = VsCodeTodo (Todo s) deriving (Eq, Ord, Show)
 
 instance IsTodo (VsCodeTodo s) where
-  isDone (VsCodeTodo todo) = isDone todo
+  isDone = lens (\(VsCodeTodo vsCodeTodo) -> vsCodeTodo ^. isDone) $ \(VsCodeTodo vsCodeTodo) b ->
+    VsCodeTodo $ isDone .~ b $ vsCodeTodo
 
 instance PPrint s => PPrint (VsCodeTodo s) where
   pprint (VsCodeTodo todo) =
@@ -43,9 +46,12 @@ showDoneWith f (Todo b s) =
   f b <> pprint s
 
 instance (IsTodo a, IsTodo b) => IsTodo (Either a b) where
-  isDone e = case e of
-    Right a -> isDone a
-    Left b  -> isDone b
+  isDone = lens (\case
+    Right a -> a ^. isDone
+    Left b  -> b ^. isDone
+    ) $ \e bool -> case e of
+    Right a -> Right $ (isDone .~ bool) a
+    Left b  -> Left $ (isDone .~ bool) b
 
 -- parser
 
