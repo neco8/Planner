@@ -1,5 +1,5 @@
 name:                Planner
-version:             0.1.0.0
+version:             0.1.0
 github:              "githubuser/Planner"
 license:             BSD3
 author:              "Author name here"
@@ -22,6 +22,7 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 - megaparsec
+- replace-megaparsec
 - containers
 - microlens
 - microlens-th
@@ -38,7 +39,7 @@ library:
   source-dirs: src
 
 executables:
-  Planner-exe:
+  planner:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

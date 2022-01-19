@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           Planner
-version:        0.1.0.0
+version:        0.1.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/Planner#readme>
 homepage:       https://github.com/githubuser/Planner#readme
 bug-reports:    https://github.com/githubuser/Planner/issues
@@ -47,12 +47,13 @@ library
     , microlens
     , microlens-th
     , optparse-declarative
+    , replace-megaparsec
     , scientific
     , text
     , vector
   default-language: Haskell2010
 
-executable Planner-exe
+executable planner
   main-is: Main.hs
   other-modules:
       Paths_Planner
@@ -71,6 +72,7 @@ executable Planner-exe
     , microlens
     , microlens-th
     , optparse-declarative
+    , replace-megaparsec
     , scientific
     , text
     , vector
@@ -98,6 +100,7 @@ test-suite Planner-tasty
     , microlens
     , microlens-th
     , optparse-declarative
+    , replace-megaparsec
     , scientific
     , tasty
     , text
