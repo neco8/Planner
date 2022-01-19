@@ -37,7 +37,7 @@ import           Todo                   (IsTodo, Todo, VsCodeTodo (..),
                                          exactTodoParser, isDone, todoParser)
 
 main :: IO ()
-main = run "Planner" (Just "0.0.1") $
+main = run "Planner" (Just "0.1.0") $
   Group "Planner program"
     [ subCmd "compile"  compile
     , subCmd "function" function
