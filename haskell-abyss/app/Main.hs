@@ -14,7 +14,9 @@ import           Data.Foldable          (all)
 import           Data.Functor           (void)
 import qualified Data.List              as L (sort)
 import           Data.Maybe             (fromMaybe, maybe)
-import           Data.Text              (Text, pack, unpack)
+import           Data.Text              (Text, pack)
+import           Data.Text.IO           (getContents, getLine, putStrLn,
+                                         readFile, writeFile)
 import           Data.Tree              (Tree (Node, rootLabel, subForest))
 import           Data.Vector            (Vector, fromList, partition, toList)
 import           ForWork                (ForWorkActionPriorityMatrix (..),
@@ -23,12 +25,15 @@ import           Lens.Micro             (mapped, sets, to, (%~), (^.))
 import           Options.Declarative    (Arg, Cmd, Flag, Option (get), run)
 import           PPrint                 (PPrint (pprint))
 import           Parser                 (treeParser)
+import           Prelude                hiding (getContents, getLine, putStrLn,
+                                         readFile, writeFile)
 import           QuickWinAnalysis       (QuickWinAnalysis, qwaParser)
+import           Replace.Megaparsec     (streamEdit)
 import           Text.Megaparsec        (errorBundlePretty, optional, parse,
                                          some)
 import           Text.Megaparsec.Char   (newline)
-import           Todo                   (IsTodo, Todo, VsCodeTodo (..), isDone,
-                                         todoParser)
+import           Todo                   (IsTodo, Todo, VsCodeTodo (..),
+                                         exactTodoParser, isDone, todoParser)
 
 main :: IO ()
 main = run "Planner" (Just "0.0.1") compile
@@ -76,19 +81,19 @@ compile iPath oPath isVsCode chartPath forWorkS ioPath =
 
 compile' :: Argument -> IO ()
 compile' Argument {..} = do
-  let input = maybe (fmap pack getContents) (fmap pack . readFile) (coerce _inputOutput <|> coerce _input)
-      output = maybe (putStrLn . unpack) ((. unpack) . writeFile) (coerce _inputOutput <|> coerce _output)
+  let input = maybe getContents readFile (coerce _inputOutput <|> coerce _input)
+      output = maybe putStrLn writeFile (coerce _inputOutput <|> coerce _output)
       outputForWork apms = fromMaybe (pure ()) $ do
         path <- coerce _inputOutput <|> coerce _output
         forWorkPath <- changeFilePathForWork (coerce _forWorkSuffix) path
-        pure $ writeFile forWorkPath . unpack . pprint $ ForWorkAPM <$> apms
+        pure $ writeFile forWorkPath . pprint $ ForWorkAPM <$> apms
       chart = maybe (const $ pure ()) getChart (coerce _chartPath)
       wrapTodo
         | coerce _isVsCodeTodoStyle = Right . VsCodeTodo
         | otherwise = Left
   i <- input
   case parse (some $ apmParser (treeParser (todoParser qwaParser)) <* optional newline) "" i of
-    Left err -> putStrLn $ errorBundlePretty err
+    Left err -> putStrLn . pack $ errorBundlePretty err
     Right as -> do
       let apms = (qwas %~ sortTodoQWA) <$> L.sort as
       output . pprint $ MDAPM . fmap (fmap wrapTodo) <$> apms
@@ -97,7 +102,24 @@ compile' Argument {..} = do
 
 sortTodoQWA :: (Ord t, IsTodo t) => Vector (Tree t) -> Vector (Tree t)
 sortTodoQWA =
-  uncurry (<>) . partition (not . all (^. to isDone)) . sort . (mapped . sets (\f s -> Node (rootLabel s) $ f $ subForest s) %~ (toList . sortTodoQWA . fromList))
+  uncurry (<>) . partition (not . all (^. isDone)) . sort . (mapped . sets (\f s -> Node (rootLabel s) $ f $ subForest s) %~ (toList . sortTodoQWA . fromList))
 
 sort :: Ord a => Vector a -> Vector a
 sort = fromList . L.sort . toList
+
+function :: Flag "t" '["toggle-done"] "" "toggle done todo" Bool ->
+  Cmd "function command" ()
+function isToggle = liftIO $ function' (get isToggle)
+
+function' :: Bool -> IO ()
+function' isToggle =
+  if isToggle then
+    io toggleDone
+  else
+    pure ()
+  where
+    io f = do
+      input <- getLine
+      putStrLn $ f input
+    toggleDone = streamEdit (exactTodoParser qwaParser) $
+      pprint . (isDone %~ not)
