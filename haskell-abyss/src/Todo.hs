@@ -64,5 +64,13 @@ doneMDParser = do
 doneVsCodeParser :: Parser Bool
 doneVsCodeParser = try (True <$ string "✔ ") <|> (False <$ string "☐ ")
 
+boolParsers :: Vector (Parser Bool)
+boolParsers = [doneMDParser, doneVsCodeParser]
+
 todoParser :: Parser s -> Parser (Todo s)
-todoParser = todoParser_ [doneMDParser, doneVsCodeParser]
+todoParser = todoParser_ boolParsers
+
+exactTodoParser :: Parser s -> Parser (Todo s)
+exactTodoParser ps = do
+  b <- choice boolParsers
+  Todo b <$> ps
