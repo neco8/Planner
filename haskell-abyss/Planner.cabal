@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           Planner
-version:        0.1.0
+version:        0.1.1
 description:    Please see the README on GitHub at <https://github.com/githubuser/Planner#readme>
 homepage:       https://github.com/githubuser/Planner#readme
 bug-reports:    https://github.com/githubuser/Planner/issues
@@ -95,6 +95,7 @@ test-suite Planner-tasty
     , barbies-th
     , base >=4.7 && <5
     , containers
+    , doctest
     , hspec-megaparsec
     , megaparsec
     , microlens

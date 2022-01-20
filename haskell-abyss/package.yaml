@@ -62,3 +62,4 @@ tests:
     - tasty
     - hspec-megaparsec
     - QuickCheck
+    - doctest
