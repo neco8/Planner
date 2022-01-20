@@ -30,6 +30,7 @@ import           Prelude                hiding (getContents, getLine, putStr,
                                          putStrLn, readFile, writeFile)
 import           QuickWinAnalysis       (QuickWinAnalysis, qwaParser)
 import           Replace.Megaparsec     (streamEdit)
+import           System.Exit            (die)
 import           Text.Megaparsec        (errorBundlePretty, optional, parse,
                                          some)
 import           Text.Megaparsec.Char   (newline)
@@ -107,7 +108,7 @@ parse_ :: IO Text -> ([ActionPriorityMatrix (Tree (Todo QuickWinAnalysis))] -> I
 parse_ input f = do
   i <- input
   case parse (some $ apmParser (treeParser (todoParser qwaParser)) <* optional newline) "" i of
-    Left err -> putStrLn . pack $ errorBundlePretty err
+    Left err -> die $ errorBundlePretty err
     Right as -> do
       let apms = (qwas %~ sortTodoQWA) <$> L.sort as
       f apms
