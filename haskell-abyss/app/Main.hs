@@ -15,7 +15,7 @@ import           Data.Functor           (void)
 import qualified Data.List              as L (sort)
 import           Data.Maybe             (fromMaybe, maybe)
 import           Data.Text              (Text, pack)
-import           Data.Text.IO           (getContents, getLine, putStrLn,
+import           Data.Text.IO           (getContents, getLine, putStr, putStrLn,
                                          readFile, writeFile)
 import           Data.Tree              (Tree (Node, rootLabel, subForest))
 import           Data.Vector            (Vector, fromList, partition, toList)
@@ -26,8 +26,8 @@ import           Options.Declarative    (Arg, Cmd, Flag, Group (..),
                                          Option (get), run, subCmd)
 import           PPrint                 (PPrint (pprint))
 import           Parser                 (treeParser)
-import           Prelude                hiding (getContents, getLine, putStrLn,
-                                         readFile, writeFile)
+import           Prelude                hiding (getContents, getLine, putStr,
+                                         putStrLn, readFile, writeFile)
 import           QuickWinAnalysis       (QuickWinAnalysis, qwaParser)
 import           Replace.Megaparsec     (streamEdit)
 import           Text.Megaparsec        (errorBundlePretty, optional, parse,
@@ -36,9 +36,11 @@ import           Text.Megaparsec.Char   (newline)
 import           Todo                   (IsTodo, Todo, VsCodeTodo (..),
                                          exactTodoParser, isDone, todoParser)
 
+logo = "██████╗ ██╗      █████╗ ███╗   ██╗███╗   ██╗███████╗██████╗ \n██╔══██╗██║     ██╔══██╗████╗  ██║████╗  ██║██╔════╝██╔══██╗ \n██████╔╝██║     ███████║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝ \n██╔═══╝ ██║     ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗ \n██║     ███████╗██║  ██║██║ ╚████║██║ ╚████║███████╗██║  ██║ \n╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ \n"
+
 main :: IO ()
 main = run "Planner" (Just "0.1.0") $
-  Group "Planner program"
+  Group ("Planner program" <> "\n\n" <> logo)
     [ subCmd "compile"  compile
     , subCmd "function" function
     ]
@@ -72,7 +74,7 @@ compile ::
   Flag "" '["vscode"] "" "vscode todo style" Bool ->
   Flag "" '["chart"] "FILE_PATH" "chart file path" (Maybe FilePath) ->
   Flag "" '["work-suffix"] "FOR_WORK_FILE_SUFFIX" "for work generation suffix" (Maybe String) ->
-  Arg "input-output" (Maybe FilePath) ->
+  Flag "f" '["input-output"] "FILE_PATH" "input and output file path" (Maybe FilePath) ->
   Cmd "compile command" ()
 compile iPath oPath isVsCode chartPath forWorkS ioPath =
   liftIO $ compile' $
@@ -96,14 +98,19 @@ compile' Argument {..} = do
       wrapTodo
         | coerce _isVsCodeTodoStyle = Right . VsCodeTodo
         | otherwise = Left
+  parse_ input $ \apms -> do
+    output . pprint $ MDAPM . fmap (fmap wrapTodo) <$> apms
+    outputForWork apms
+    chart apms
+
+parse_ :: IO Text -> ([ActionPriorityMatrix (Tree (Todo QuickWinAnalysis))] -> IO ()) -> IO ()
+parse_ input f = do
   i <- input
   case parse (some $ apmParser (treeParser (todoParser qwaParser)) <* optional newline) "" i of
     Left err -> putStrLn . pack $ errorBundlePretty err
     Right as -> do
       let apms = (qwas %~ sortTodoQWA) <$> L.sort as
-      output . pprint $ MDAPM . fmap (fmap wrapTodo) <$> apms
-      outputForWork apms
-      chart apms
+      f apms
 
 sortTodoQWA :: (Ord t, IsTodo t) => Vector (Tree t) -> Vector (Tree t)
 sortTodoQWA =
@@ -121,7 +128,7 @@ function' isToggle =
   if isToggle then
     io toggleDone
   else
-    pure ()
+    parse_ getContents (putStrLn . pprint . fmap MDAPM)
   where
     io f = do
       input <- getLine
