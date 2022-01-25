@@ -55,6 +55,44 @@ instance (IsTodo a, IsTodo b) => IsTodo (Either a b) where
 
 -- parser
 
+atParser :: TimeZone -> Parser At
+atParser timeZone = parserFromMaybe "failed with constructing At." $ do
+  year <- rangeParser 2000 3000
+  char '/'
+  month <- rangeParser 1 12
+  char '/'
+  day <- rangeParser 1 31
+  char '-'
+  hour <- rangeParser 0 23
+  char ':'
+  minute <- rangeParser 0 59
+  char ':'
+  second <- rangeParser 0 59
+  let mtod = makeTimeOfDayValid hour minute . fromRational . (% 1) $ toInteger second
+      mdoy = fromGregorianValid (toInteger year) month day
+      mzonedTime = flip ZonedTime timeZone <$> (LocalTime <$> mdoy <*> mtod)
+      mutcTime = zonedTimeToUTC <$> mzonedTime
+  pure (At <$> mutcTime)
+    where
+      rangeParser :: Int -> Int -> Parser Int
+      rangeParser min max = do
+        let minNumberOfDigit = getNumberOfDigit min
+            maxNumberOfDigit = getNumberOfDigit max
+        numStr <- count' minNumberOfDigit maxNumberOfDigit digitChar
+        case readMaybe numStr :: Maybe Int of
+          Just num -> if num >= min && num <= max then
+            pure num
+          else
+            fail $ "invalid range. " <> show min <> " <= x <= " <> show max <> "."
+          Nothing -> fail $ "this is not a number. '" <> numStr <> "'"
+      getNumberOfDigit :: Int -> Int
+      getNumberOfDigit num =
+        let f :: ((Int, Int) -> (Int, Int)) -> (Int, Int) -> (Int, Int)
+            f r (nod, n)
+              | n < 10 = (nod, n)
+              | otherwise = r (nod + 1, n `div` 10)
+         in fst $ fix f (1, num)
+
 todoParser_ :: Vector (Parser Bool) -> Parser s -> Parser (Todo s)
 todoParser_ pdones ps = do
   b <- try (choice pdones) <|> pure False
