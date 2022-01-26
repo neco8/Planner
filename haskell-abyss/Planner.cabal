@@ -5,13 +5,13 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           Planner
-version:        0.1.1
-description:    Please see the README on GitHub at <https://github.com/githubuser/Planner#readme>
-homepage:       https://github.com/githubuser/Planner#readme
-bug-reports:    https://github.com/githubuser/Planner/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2022 Author name here
+version:        0.2.0
+description:    Please see the README on GitHub at <https://github.com/neco8/Planner#readme>
+homepage:       https://github.com/neco8/Planner#readme
+bug-reports:    https://github.com/neco8/Planner/issues
+author:         neco8
+maintainer:     shogibeshow@gmail.com
+copyright:      2022 neco8
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -21,11 +21,12 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/Planner
+  location: https://github.com/neco8/Planner
 
 library
   exposed-modules:
       ActionPriorityMatrix
+      AdditionalInformation
       Chart
       ForWork
       Parser
@@ -50,6 +51,7 @@ library
     , replace-megaparsec
     , scientific
     , text
+    , time
     , vector
   default-language: Haskell2010
 
@@ -75,6 +77,7 @@ executable planner
     , replace-megaparsec
     , scientific
     , text
+    , time
     , vector
   default-language: Haskell2010
 
@@ -105,5 +108,6 @@ test-suite Planner-tasty
     , scientific
     , tasty
     , text
+    , time
     , vector
   default-language: Haskell2010

@@ -5,6 +5,8 @@
 
 module ActionPriorityMatrix where
 
+import           AdditionalInformation      (addInformationTo,
+                                             runAdditionalInformation)
 import           Data.Coerce                (coerce)
 import           Data.Function              (on)
 import           Data.Functor               (void)
@@ -150,18 +152,13 @@ effortParser =
   parserFromMaybe "fail with ActionPriorityMatrix effort parser." $
     getEffort . toRealFloat <$> L.scientific
 
-tagParser :: Parser Tag
-tagParser = do
-  string " #"
-  Tag <$> takeWhile1P Nothing (\a -> a /= ' ' && a /= '\n' && a /= '#')
-
 apmParser :: Parser qwa -> Parser (ActionPriorityMatrix qwa)
 apmParser pqwa = L.indentBlock scn $ do
-  optional $ string "- "
-  name <- nameParser
-  comma
-  impact <- impactParser
-  comma
-  effort <- effortParser
-  tags <- fromList <$> many tagParser
-  pure $ L.IndentMany Nothing (pure . APM name impact effort tags . fromList) pqwa
+  (getAPM, information) <- addInformationTo $ do
+    optional $ string "- "
+    name <- nameParser
+    comma
+    impact <- impactParser
+    comma
+    APM name impact <$> effortParser
+  pure $ L.IndentMany Nothing (pure . getAPM (Tag . runAdditionalInformation <$> fromList information) . fromList) pqwa
