@@ -3,26 +3,72 @@
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
-module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo, exactTodoParser) where
-import           Data.Functor         ((<$))
-import           Data.Text            (Text)
-import           Data.Vector          (Vector)
-import           GHC.Base             (coerce)
-import           Lens.Micro           (Lens', lens, (.~), (^.))
-import           Lens.Micro.TH        (makeLenses)
-import           PPrint               (PPrint, pprint)
-import           Parser               (Parser)
-import           Text.Megaparsec      (choice, try, (<|>))
-import           Text.Megaparsec.Char (char, string)
+{-# LANGUAGE TupleSections     #-}
+module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, doneAtToAt, At(..), DoneAt, toggleAt) where
+import           AdditionalInformation (AdditionalInformation (..),
+                                        addInformationTo,
+                                        runAdditionalInformation)
+import           Data.Fixed            (Fixed (MkFixed))
+import           Data.Function         (fix, on)
+import           Data.Functor          ((<$))
+import           Data.Ratio            ((%))
+import           Data.Text             (Text, pack, unpack)
+import           Data.Time             (LocalTime (LocalTime), TimeZone,
+                                        UTCTime,
+                                        ZonedTime (ZonedTime, zonedTimeZone),
+                                        defaultTimeLocale, formatTime,
+                                        fromGregorianValid, getCurrentTime,
+                                        getCurrentTimeZone, makeTimeOfDayValid,
+                                        zonedTimeToUTC)
+import           Data.Vector           (Vector)
+import           GHC.Base              (coerce)
+import           Lens.Micro            (Lens', lens, (.~), (^.))
+import           Lens.Micro.TH         (makeLenses)
+import           PPrint                (PPrint, pprint)
+import           Parser                (Parser, parserFromMaybe)
+import           Text.Megaparsec       (choice, count, count', parseMaybe,
+                                        parseTest, try, (<|>))
+import           Text.Megaparsec.Char  (char, digitChar, string)
+import           Text.Read             (readMaybe)
+
+newtype At = At ZonedTime deriving (Show)
+
+runAt :: At -> ZonedTime
+runAt = coerce
+
+instance Eq At where
+  (==) = (==) `on` (zonedTimeToUTC . runAt)
+
+instance Ord At where
+  compare = compare `on` (zonedTimeToUTC . runAt)
+
+instance PPrint At where
+  pprint (At time) = pack $ formatTime defaultTimeLocale format time
+    where
+      format = "%Y/%m/%d-%H:%M:%S"
+
+data DoneAt = Done At | UnDone deriving (Eq, Ord, Show)
+
+doneAtToBool :: DoneAt -> Bool
+doneAtToBool (Done _) = True
+doneAtToBool UnDone   = False
+
+doneAtToAt :: DoneAt -> Maybe At
+doneAtToAt (Done at) = Just at
+doneAtToAt _         = Nothing
+
+toggleAt :: ZonedTime -> DoneAt -> DoneAt
+toggleAt time (Done _) = UnDone
+toggleAt time UnDone   = Done $ At time
 
 data Todo s = Todo
-  { _isTodoDone :: Bool
+  { _isTodoDone :: DoneAt
   , _content    :: s
   } deriving (Eq, Ord, Show, Functor)
 makeLenses ''Todo
 
 class IsTodo t where
-  isDone :: Lens' t Bool
+  isDone :: Lens' t DoneAt
 
 instance IsTodo (Todo s) where
   isDone = isTodoDone
@@ -43,7 +89,7 @@ instance PPrint s => PPrint (VsCodeTodo s) where
 
 showDoneWith :: PPrint s => (Bool -> Text) -> Todo s -> Text
 showDoneWith f (Todo b s) =
-  f b <> pprint s
+  f (doneAtToBool b) <> pprint s <> maybe "" pprint (AdditionalInformation . pprint <$> doneAtToAt b)
 
 instance (IsTodo a, IsTodo b) => IsTodo (Either a b) where
   isDone = lens (\case
@@ -71,8 +117,7 @@ atParser timeZone = parserFromMaybe "failed with constructing At." $ do
   let mtod = makeTimeOfDayValid hour minute . fromRational . (% 1) $ toInteger second
       mdoy = fromGregorianValid (toInteger year) month day
       mzonedTime = flip ZonedTime timeZone <$> (LocalTime <$> mdoy <*> mtod)
-      mutcTime = zonedTimeToUTC <$> mzonedTime
-  pure (At <$> mutcTime)
+  pure (At <$> mzonedTime)
     where
       rangeParser :: Int -> Int -> Parser Int
       rangeParser min max = do
@@ -93,10 +138,15 @@ atParser timeZone = parserFromMaybe "failed with constructing At." $ do
               | otherwise = r (nod + 1, n `div` 10)
          in fst $ fix f (1, num)
 
-todoParser_ :: Vector (Parser Bool) -> Parser s -> Parser (Todo s)
-todoParser_ pdones ps = do
+todoWithoutTimeParser_ :: Vector (Parser Bool) -> Parser s -> Parser (At -> Todo s)
+todoWithoutTimeParser_ pdones ps = do
   b <- try (choice pdones) <|> pure False
-  Todo b <$> ps
+  s <- ps
+  pure $ \at ->
+    if b then
+      Todo (Done at) s
+    else
+      Todo UnDone s
 
 doneMDParser :: Parser Bool
 doneMDParser = do
@@ -111,10 +161,47 @@ doneVsCodeParser = try (True <$ string "✔ ") <|> (False <$ string "☐ ")
 boolParsers :: Vector (Parser Bool)
 boolParsers = [doneMDParser, doneVsCodeParser]
 
-todoParser :: Parser s -> Parser (Todo s)
-todoParser = todoParser_ boolParsers
+todoWithoutTimeParser :: Parser s -> Parser (At -> Todo s)
+todoWithoutTimeParser = todoWithoutTimeParser_ boolParsers
 
-exactTodoParser :: Parser s -> Parser (Todo s)
-exactTodoParser ps = do
+todoParser :: ZonedTime -> Parser s -> Parser (Todo s)
+todoParser now p = do
+  (getTodo, information) <- addInformationTo (todoWithoutTimeParser p)
+  case rightMost (parseMaybe (atParser (zonedTimeZone now))) (runAdditionalInformation <$> information) of
+    Just at -> pure . getTodo $ at
+    _       -> pure . getTodo $ At now
+
+exactTodoWithoutTimeParser :: Parser s -> Parser (At -> Todo s)
+exactTodoWithoutTimeParser ps = do
   b <- choice boolParsers
-  Todo b <$> ps
+  s <- ps
+  pure $ \at ->
+    if b then
+      Todo (Done at) s
+    else
+      Todo UnDone s
+
+exactTodoParser :: ZonedTime -> Parser s -> Parser (Todo s)
+exactTodoParser now p = do
+  (getTodo, information) <- addInformationTo (exactTodoWithoutTimeParser p)
+  case rightMost (parseMaybe (atParser (zonedTimeZone now))) (runAdditionalInformation <$> information) of
+    Just at -> pure . getTodo $ at
+    _       -> pure . getTodo $ At now
+
+rightMost :: (a -> Maybe b) -> [a] -> Maybe b
+rightMost f prevls = do
+  lasta <- last' prevls
+  inita <- init' prevls
+  case f lasta of
+    Just b  -> Just b
+    Nothing -> rightMost f inita
+
+last' :: [a] -> Maybe a
+last' ls = case length ls of
+  0 -> Nothing
+  _ -> Just $ last ls
+
+init' :: [a] -> Maybe [a]
+init' ls = case length ls of
+  0 -> Nothing
+  _ -> Just $ init ls
