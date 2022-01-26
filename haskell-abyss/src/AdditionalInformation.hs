@@ -4,11 +4,15 @@ module AdditionalInformation where
 import           Control.Applicative  (Alternative (many))
 import           Data.Coerce          (coerce)
 import           Data.Text            (Text)
+import           PPrint               (PPrint (pprint))
 import           Parser               (Parser)
 import           Text.Megaparsec      (MonadParsec (takeWhile1P))
 import           Text.Megaparsec.Char (string)
 
 newtype AdditionalInformation = AdditionalInformation Text deriving (Eq, Ord, Show)
+
+instance PPrint AdditionalInformation where
+  pprint a = " #" <> runAdditionalInformation a
 
 runAdditionalInformation :: AdditionalInformation -> Text
 runAdditionalInformation = coerce
