@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
-module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, doneAtToAt, At(..), DoneAt, toggleAt) where
+module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, At(..), DoneAt, toggleAt) where
 import           AdditionalInformation (AdditionalInformation (..),
                                         addInformationTo,
                                         runAdditionalInformation)
@@ -49,13 +49,13 @@ instance PPrint At where
 
 data DoneAt = Done At | UnDone deriving (Eq, Ord, Show)
 
+instance PPrint DoneAt where
+  pprint (Done at) = pprint at
+  pprint UnDone    = ""
+
 doneAtToBool :: DoneAt -> Bool
 doneAtToBool (Done _) = True
 doneAtToBool UnDone   = False
-
-doneAtToAt :: DoneAt -> Maybe At
-doneAtToAt (Done at) = Just at
-doneAtToAt _         = Nothing
 
 toggleAt :: ZonedTime -> DoneAt -> DoneAt
 toggleAt time (Done _) = UnDone
@@ -88,8 +88,8 @@ instance PPrint s => PPrint (VsCodeTodo s) where
     showDoneWith (\b -> if b then "✔ " else "☐ ") todo
 
 showDoneWith :: PPrint s => (Bool -> Text) -> Todo s -> Text
-showDoneWith f (Todo b s) =
-  f (doneAtToBool b) <> pprint s <> maybe "" pprint (AdditionalInformation . pprint <$> doneAtToAt b)
+showDoneWith f (Todo d s) =
+  f (doneAtToBool d) <> pprint s <> pprint (AdditionalInformation $ pprint d)
 
 instance (IsTodo a, IsTodo b) => IsTodo (Either a b) where
   isDone = lens (\case
