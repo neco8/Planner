@@ -11,6 +11,7 @@ import           AdditionalInformation (AdditionalInformation (..),
 import           Data.Fixed            (Fixed (MkFixed))
 import           Data.Function         (fix, on)
 import           Data.Functor          ((<$))
+import           Data.Functor.Identity (Identity (..))
 import           Data.Ratio            ((%))
 import           Data.Text             (Text, pack, unpack)
 import           Data.Time             (LocalTime (LocalTime), TimeZone,
@@ -49,10 +50,10 @@ instance PPrint At where
 
 data DoneAt = Done At | UnDone deriving (Eq, Ord, Show)
 
-doneAtAt :: LensLike' Maybe DoneAt At
+doneAtAt :: LensLike' Identity DoneAt At
 doneAtAt afb s = case s of
   Done ata -> Done <$> afb ata
-  UnDone   -> Nothing
+  UnDone   -> Identity UnDone
 
 atLocalTime :: Lens' At LocalTime
 atLocalTime = lens
