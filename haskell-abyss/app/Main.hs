@@ -13,16 +13,18 @@ import           Data.Coerce            (coerce)
 import           Data.Foldable          (all)
 import           Data.Functor           (void)
 import qualified Data.List              as L (sort)
-import           Data.Maybe             (fromMaybe, maybe)
+import           Data.Maybe             (fromMaybe, isJust, maybe)
 import           Data.Text              (Text, pack)
 import           Data.Text.IO           (getContents, getLine, putStr, putStrLn,
                                          readFile, writeFile)
-import           Data.Time              (getZonedTime, zonedTimeToUTC)
+import           Data.Time              (addLocalTime, getZonedTime,
+                                         zonedTimeToUTC)
 import           Data.Tree              (Tree (Node, rootLabel, subForest))
 import           Data.Vector            (Vector, fromList, partition, toList)
 import           ForWork                (ForWorkActionPriorityMatrix (..),
                                          changeFilePathForWork)
-import           Lens.Micro             (mapped, sets, to, (%~), (^.))
+import           Lens.Micro             (_2, mapped, sets, to, (%~), (<%~),
+                                         (^.))
 import           Options.Declarative    (Arg, Cmd, Flag, Group (..),
                                          Option (get), run, subCmd)
 import           PPrint                 (PPrint (pprint))
@@ -36,9 +38,9 @@ import           Text.Megaparsec        (errorBundlePretty, optional, parse,
                                          some)
 import           Text.Megaparsec.Char   (newline)
 import           Todo                   (IsTodo, Todo, VsCodeTodo (..),
-                                         doneAtToBool, exactTodoParser, isDone,
-                                         todoParser, toggleAt)
-
+                                         atLocalTime, doneAtAt, doneAtToBool,
+                                         exactTodoParser, isDone, todoParser,
+                                         toggleAt)
 
 logo = "██████╗ ██╗      █████╗ ███╗   ██╗███╗   ██╗███████╗██████╗ \n██╔══██╗██║     ██╔══██╗████╗  ██║████╗  ██║██╔════╝██╔══██╗ \n██████╔╝██║     ███████║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝ \n██╔═══╝ ██║     ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗ \n██║     ███████╗██║  ██║██║ ╚████║██║ ╚████║███████╗██║  ██║ \n╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ \n"
 
@@ -125,19 +127,24 @@ sort :: Ord a => Vector a -> Vector a
 sort = fromList . L.sort . toList
 
 function :: Flag "t" '["toggle-done"] "" "toggle done todo" Bool ->
+  Flag "" '["adjust-done-day"] "HOW_MANY_DAYS_TO_ADJUST" "adjust done-day back and forth" (Maybe Int) ->
   Cmd "function command" ()
-function isToggle = liftIO $ function' (get isToggle)
+function isToggle howManyDays = liftIO $ function' (get isToggle) (get howManyDays)
 
-function' :: Bool -> IO ()
-function' isToggle = do
+function' :: Bool -> Maybe Int -> IO ()
+function' isToggle mhowManyDays = do
   zonedTime <- getZonedTime
-  if isToggle then
-    io $ toggleDone zonedTime
-  else
-    parse_ getContents (putStrLn . pprint . fmap MDAPM)
+  case () of
+    _
+      | isToggle -> io $ toggleDone zonedTime
+      | isJust mhowManyDays -> io $ adjustTime zonedTime mhowManyDays
+      | otherwise -> parse_ getContents (putStrLn . pprint . fmap MDAPM)
   where
     io f = do
       input <- getLine
       putStrLn $ f input
     toggleDone zonedTime = streamEdit (exactTodoParser zonedTime qwaParser) $
       pprint . (isDone %~ toggleAt zonedTime)
+    adjustTime _ Nothing = id
+    adjustTime zonedTime (Just howManyDays) = streamEdit (exactTodoParser zonedTime qwaParser) $
+      pprint . (isDone . doneAtAt . atLocalTime %~ addLocalTime (fromInteger $ toInteger $ howManyDays * 24 * 60 * 60))
