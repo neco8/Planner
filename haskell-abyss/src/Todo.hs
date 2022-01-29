@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
-module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, At(..), DoneAt, toggleAt) where
+module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, At(..), DoneAt, toggleAt, doneAtAt, atLocalTime) where
 import           AdditionalInformation (AdditionalInformation (..),
                                         addInformationTo,
                                         runAdditionalInformation)
@@ -15,14 +15,14 @@ import           Data.Ratio            ((%))
 import           Data.Text             (Text, pack, unpack)
 import           Data.Time             (LocalTime (LocalTime), TimeZone,
                                         UTCTime,
-                                        ZonedTime (ZonedTime, zonedTimeZone),
+                                        ZonedTime (ZonedTime, zonedTimeToLocalTime, zonedTimeZone),
                                         defaultTimeLocale, formatTime,
                                         fromGregorianValid, getCurrentTime,
-                                        getCurrentTimeZone, makeTimeOfDayValid,
-                                        zonedTimeToUTC)
+                                        getCurrentTimeZone, getZonedTime,
+                                        makeTimeOfDayValid, zonedTimeToUTC)
 import           Data.Vector           (Vector)
 import           GHC.Base              (coerce)
-import           Lens.Micro            (Lens', lens, (.~), (^.))
+import           Lens.Micro            (Lens', LensLike', lens, (.~), (^.))
 import           Lens.Micro.TH         (makeLenses)
 import           PPrint                (PPrint, pprint)
 import           Parser                (Parser, parserFromMaybe)
@@ -48,6 +48,20 @@ instance PPrint At where
       format = "%Y/%m/%d-%H:%M:%S"
 
 data DoneAt = Done At | UnDone deriving (Eq, Ord, Show)
+
+doneAtAt :: LensLike' Maybe DoneAt At
+doneAtAt afb s = case s of
+  Done ata -> Done <$> afb ata
+  UnDone   -> Nothing
+
+atLocalTime :: Lens' At LocalTime
+atLocalTime = lens
+  (\(At zoned) ->
+    zonedTimeToLocalTime zoned
+  )
+  (\(At zoned) localB ->
+    At $ ZonedTime localB $ zonedTimeZone zoned
+  )
 
 instance PPrint DoneAt where
   pprint (Done at) = pprint at
