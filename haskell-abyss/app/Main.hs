@@ -14,7 +14,7 @@ import           Data.Foldable          (all)
 import           Data.Functor           (void)
 import qualified Data.List              as L (sort)
 import           Data.Maybe             (fromMaybe, isJust, maybe)
-import           Data.Text              (Text, pack)
+import           Data.Text              (Text, lines, pack)
 import           Data.Text.IO           (getContents, getLine, putStr, putStrLn,
                                          readFile, writeFile)
 import           Data.Time              (addLocalTime, getZonedTime,
@@ -29,8 +29,8 @@ import           Options.Declarative    (Arg, Cmd, Flag, Group (..),
                                          Option (get), run, subCmd)
 import           PPrint                 (PPrint (pprint))
 import           Parser                 (treeParser)
-import           Prelude                hiding (getContents, getLine, putStr,
-                                         putStrLn, readFile, writeFile)
+import           Prelude                hiding (getContents, getLine, lines,
+                                         putStr, putStrLn, readFile, writeFile)
 import           QuickWinAnalysis       (QuickWinAnalysis, qwaParser)
 import           Replace.Megaparsec     (streamEdit)
 import           System.Exit            (die)
@@ -141,8 +141,8 @@ function' isToggle mhowManyDays = do
       | otherwise -> parse_ getContents (putStrLn . pprint . fmap MDAPM)
   where
     io f = do
-      input <- getLine
-      putStrLn $ f input
+      inputs <- lines <$> getContents
+      sequence_ $ putStrLn . f <$> inputs
     toggleDone zonedTime = streamEdit (exactTodoParser zonedTime qwaParser) $
       pprint . (isDone %~ toggleAt zonedTime)
     adjustTime _ Nothing = id
