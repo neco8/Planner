@@ -35,6 +35,8 @@ dependencies:
 - Chart
 - Chart-diagrams
 - time
+- recursion-schemes
+- safe
 
 library:
   source-dirs: src

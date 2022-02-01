@@ -38,9 +38,9 @@ import           Text.Megaparsec        (errorBundlePretty, optional, parse,
                                          some)
 import           Text.Megaparsec.Char   (newline)
 import           Todo                   (IsTodo, Todo, VsCodeTodo (..),
-                                         atLocalTime, doneAtAt, doneAtToBool,
-                                         exactTodoParser, isDone, todoParser,
-                                         toggleAt)
+                                         atLocalTime, doneAt, doneAtAt,
+                                         doneAtToBool, exactTodoParser,
+                                         todoParser, toggleAt)
 
 logo = "██████╗ ██╗      █████╗ ███╗   ██╗███╗   ██╗███████╗██████╗ \n██╔══██╗██║     ██╔══██╗████╗  ██║████╗  ██║██╔════╝██╔══██╗ \n██████╔╝██║     ███████║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝ \n██╔═══╝ ██║     ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗ \n██║     ███████╗██║  ██║██║ ╚████║██║ ╚████║███████╗██║  ██║ \n╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ \n"
 
@@ -121,7 +121,7 @@ parse_ input f = do
 
 sortTodoQWA :: (Ord t, IsTodo t) => Vector (Tree t) -> Vector (Tree t)
 sortTodoQWA =
-  uncurry (<>) . partition (not . all (^. isDone . to doneAtToBool)) . sort . (mapped . sets (\f s -> Node (rootLabel s) $ f $ subForest s) %~ (toList . sortTodoQWA . fromList))
+  uncurry (<>) . partition (not . all (^. doneAt . to doneAtToBool)) . sort . (mapped . sets (\f s -> Node (rootLabel s) $ f $ subForest s) %~ (toList . sortTodoQWA . fromList))
 
 sort :: Ord a => Vector a -> Vector a
 sort = fromList . L.sort . toList
@@ -144,7 +144,7 @@ function' isToggle mhowManyDays = do
       inputs <- lines <$> getContents
       sequence_ $ putStrLn . f <$> inputs
     toggleDone zonedTime = streamEdit (exactTodoParser zonedTime qwaParser) $
-      pprint . (isDone %~ toggleAt zonedTime)
+      pprint . (doneAt %~ toggleAt zonedTime)
     adjustTime _ Nothing = id
     adjustTime zonedTime (Just howManyDays) = streamEdit (exactTodoParser zonedTime qwaParser) $
-      pprint . (isDone . doneAtAt . atLocalTime %~ addLocalTime (fromInteger $ toInteger $ howManyDays * 24 * 60 * 60))
+      pprint . (doneAt . doneAtAt . atLocalTime %~ addLocalTime (fromInteger $ toInteger $ howManyDays * 24 * 60 * 60))

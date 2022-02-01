@@ -1,32 +1,42 @@
 {-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
-module Todo (Todo (..), todoParser, isDone, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, At(..), DoneAt, toggleAt, doneAtAt, atLocalTime) where
+module Todo (makeTodoTreeValid, Todo (..), todoParser, doneAt, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, At(..), DoneAt, toggleAt, doneAtAt, atLocalTime, TodoTree) where
 import           AdditionalInformation (AdditionalInformation (..),
                                         addInformationTo,
                                         runAdditionalInformation)
+import           Control.Arrow         ((&&&))
 import           Data.Fixed            (Fixed (MkFixed))
 import           Data.Function         (fix, on)
 import           Data.Functor          ((<$))
+import           Data.Functor.Base     (TreeF (NodeF))
+import           Data.Functor.Foldable (Recursive (cata))
 import           Data.Functor.Identity (Identity (..))
+import           Data.List.NonEmpty    (nonEmpty)
 import           Data.Ratio            ((%))
 import           Data.Text             (Text, pack, unpack)
 import           Data.Time             (LocalTime (LocalTime), TimeZone,
                                         UTCTime,
                                         ZonedTime (ZonedTime, zonedTimeToLocalTime, zonedTimeZone),
-                                        defaultTimeLocale, formatTime,
-                                        fromGregorianValid, getCurrentTime,
-                                        getCurrentTimeZone, getZonedTime,
-                                        makeTimeOfDayValid, zonedTimeToUTC)
+                                        addUTCTime, defaultTimeLocale,
+                                        formatTime, fromGregorianValid,
+                                        getCurrentTime, getCurrentTimeZone,
+                                        getZonedTime, makeTimeOfDayValid,
+                                        utcToZonedTime, zonedTimeToUTC)
+import qualified Data.Tree             as Tree (Tree (..), rootLabel, subForest)
 import           Data.Vector           (Vector)
 import           GHC.Base              (coerce)
-import           Lens.Micro            (Lens', LensLike', lens, (.~), (^.))
+import           Lens.Micro            (Lens', LensLike', Traversal', _Just,
+                                        each, filtered, lens, to, (&), (.~),
+                                        (^.), (^..), (^?))
 import           Lens.Micro.TH         (makeLenses)
 import           PPrint                (PPrint, pprint)
 import           Parser                (Parser, parserFromMaybe)
+import           Safe.Foldable         (maximumMay)
 import           Text.Megaparsec       (choice, count, count', parseMaybe,
                                         parseTest, try, (<|>))
 import           Text.Megaparsec.Char  (char, digitChar, string)
@@ -50,10 +60,10 @@ instance PPrint At where
 
 data DoneAt = Done At | UnDone deriving (Eq, Ord, Show)
 
-doneAtAt :: LensLike' Identity DoneAt At
+doneAtAt :: Traversal' DoneAt At
 doneAtAt afb s = case s of
-  Done ata -> Done <$> afb ata
-  UnDone   -> Identity UnDone
+  Done aAt -> Done <$> afb aAt
+  UnDone   -> pure UnDone
 
 atLocalTime :: Lens' At LocalTime
 atLocalTime = lens
@@ -77,16 +87,50 @@ toggleAt time (Done _) = UnDone
 toggleAt time UnDone   = Done $ At time
 
 data Todo s = Todo
-  { _isTodoDone :: DoneAt
+  { _todoDoneAt :: DoneAt
   , _content    :: s
   } deriving (Eq, Ord, Show, Functor)
 makeLenses ''Todo
 
 class IsTodo t where
-  isDone :: Lens' t DoneAt
+  doneAt :: Lens' t DoneAt
 
 instance IsTodo (Todo s) where
-  isDone = isTodoDone
+  doneAt = todoDoneAt
+
+newtype TodoTree s = TodoTree (Tree.Tree (Todo s))
+
+rootLabel :: Lens' (Tree.Tree a) a
+rootLabel = lens Tree.rootLabel (\tree label ->
+  Tree.Node label $ Tree.subForest tree
+  )
+
+subForest :: Lens' (Tree.Tree a) [Tree.Tree a]
+subForest = lens Tree.subForest (Tree.Node . Tree.rootLabel)
+
+makeTodoTreeValid :: Tree.Tree (Todo s) -> TodoTree s
+makeTodoTreeValid tree =
+  TodoTree $ case (isDone &&& latestDoneAt) tree of
+    (True, Just d) -> ((rootLabel . doneAt) .~ d) tree
+    _              -> ((rootLabel . doneAt) .~ UnDone) tree
+    where
+      isDone :: Tree.Tree (Todo s) -> Bool
+      isDone tree = case tree ^. subForest . to nonEmpty . to (fmap $ all isDone) of
+        Just bool -> bool
+        Nothing   -> tree ^. rootLabel . doneAt . to doneAtToBool
+      latestDoneAt :: Tree.Tree (Todo s) -> Maybe DoneAt
+      latestDoneAt tree =
+        cata (\case
+          NodeF todo [] -> todo ^. doneAt . to (toMaybe doneAtToBool)
+          NodeF todo mlatests -> maximumMay (((todo ^. doneAt . to (toMaybe doneAtToBool)) : mlatests) ^.. each . _Just))
+          tree
+
+toMaybe :: (a -> Bool) -> a -> Maybe a
+toMaybe pred a =
+  if pred a then
+    Just a
+  else
+    Nothing
 
 instance PPrint s => PPrint (Todo s) where
   pprint =
@@ -95,8 +139,8 @@ instance PPrint s => PPrint (Todo s) where
 newtype VsCodeTodo s = VsCodeTodo (Todo s) deriving (Eq, Ord, Show)
 
 instance IsTodo (VsCodeTodo s) where
-  isDone = lens (\(VsCodeTodo vsCodeTodo) -> vsCodeTodo ^. isDone) $ \(VsCodeTodo vsCodeTodo) b ->
-    VsCodeTodo $ isDone .~ b $ vsCodeTodo
+  doneAt = lens (\(VsCodeTodo vsCodeTodo) -> vsCodeTodo ^. doneAt) $ \(VsCodeTodo vsCodeTodo) b ->
+    VsCodeTodo $ doneAt .~ b $ vsCodeTodo
 
 instance PPrint s => PPrint (VsCodeTodo s) where
   pprint (VsCodeTodo todo) =
@@ -107,12 +151,12 @@ showDoneWith f (Todo d s) =
   f (doneAtToBool d) <> pprint s <> pprint (AdditionalInformation $ pprint d)
 
 instance (IsTodo a, IsTodo b) => IsTodo (Either a b) where
-  isDone = lens (\case
-    Right a -> a ^. isDone
-    Left b  -> b ^. isDone
+  doneAt = lens (\case
+    Right a -> a ^. doneAt
+    Left b  -> b ^. doneAt
     ) $ \e bool -> case e of
-    Right a -> Right $ (isDone .~ bool) a
-    Left b  -> Left $ (isDone .~ bool) b
+    Right a -> Right $ (doneAt .~ bool) a
+    Left b  -> Left $ (doneAt .~ bool) b
 
 -- parser
 
@@ -202,6 +246,8 @@ exactTodoParser now p = do
   case rightMost (parseMaybe (atParser (zonedTimeZone now))) (runAdditionalInformation <$> information) of
     Just at -> pure . getTodo $ at
     _       -> pure . getTodo $ At now
+
+-- util
 
 rightMost :: (a -> Maybe b) -> [a] -> Maybe b
 rightMost f prevls = do

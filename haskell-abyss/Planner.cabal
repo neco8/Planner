@@ -48,7 +48,9 @@ library
     , microlens
     , microlens-th
     , optparse-declarative
+    , recursion-schemes
     , replace-megaparsec
+    , safe
     , scientific
     , text
     , time
@@ -74,7 +76,9 @@ executable planner
     , microlens
     , microlens-th
     , optparse-declarative
+    , recursion-schemes
     , replace-megaparsec
+    , safe
     , scientific
     , text
     , time
@@ -104,7 +108,9 @@ test-suite Planner-tasty
     , microlens
     , microlens-th
     , optparse-declarative
+    , recursion-schemes
     , replace-megaparsec
+    , safe
     , scientific
     , tasty
     , text
