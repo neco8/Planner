@@ -123,7 +123,7 @@ subForest = lens Tree.subForest (Tree.Node . Tree.rootLabel)
 
 makeTodoTreeValid :: Ord s => (Tree.Tree (Todo s) -> Tree.Tree (Todo s)) -> Tree.Tree (Todo s) -> TodoTree s
 makeTodoTreeValid makeTodoTreeSValid tree =
-  TodoTree . sortTodoTree . makeTodoTreeSValid $ case (isDone &&& latestDoneAt) tree of
+  TodoTree . sortTodoTree . makeTodoTreeSValid $ case (isDone &&& getLatestDoneAt) tree of
     (True, Just d) -> ((rootLabel . doneAt) .~ d) tree
     _              -> ((rootLabel . doneAt) .~ UnDone) tree
     where
@@ -131,8 +131,8 @@ makeTodoTreeValid makeTodoTreeSValid tree =
       isDone tree = case tree ^. subForest . to nonEmpty . to (fmap $ all isDone) of
         Just bool -> bool
         Nothing   -> tree ^. rootLabel . doneAt . to doneAtToBool
-      latestDoneAt :: Tree.Tree (Todo s) -> Maybe DoneAt
-      latestDoneAt tree =
+      getLatestDoneAt :: Tree.Tree (Todo s) -> Maybe DoneAt
+      getLatestDoneAt tree =
         cata (\case
           NodeF todo [] -> todo ^. doneAt . to (toMaybe doneAtToBool)
           NodeF todo mlatests -> maximumMay (((todo ^. doneAt . to (toMaybe doneAtToBool)) : mlatests) ^.. each . _Just))
