@@ -16,6 +16,7 @@ import           Data.Functor          ((<$))
 import           Data.Functor.Base     (TreeF (NodeF))
 import           Data.Functor.Foldable (Recursive (cata))
 import           Data.Functor.Identity (Identity (..))
+import           Data.List             (sort, sortOn)
 import           Data.List.NonEmpty    (nonEmpty)
 import           Data.Ratio            ((%))
 import           Data.Text             (Text, pack, unpack)
@@ -31,8 +32,8 @@ import qualified Data.Tree             as Tree (Tree (..), rootLabel, subForest)
 import           Data.Vector           (Vector)
 import           GHC.Base              (coerce)
 import           Lens.Micro            (Lens', LensLike', Traversal', _Just,
-                                        each, filtered, lens, to, (&), (.~),
-                                        (^.), (^..), (^?))
+                                        each, filtered, lens, mapped, to, (%~),
+                                        (&), (.~), (^.), (^..), (^?))
 import           Lens.Micro.TH         (makeLenses)
 import           PPrint                (PPrint, pprint)
 import           Parser                (Parser, parserFromMaybe)
@@ -106,6 +107,12 @@ runTodoTree = coerce
 instance PPrint s => PPrint (TodoTree s) where
   pprint = pprint . runTodoTree
 
+instance Eq s => Eq (TodoTree s) where
+  (==) = (==) `on` runTodoTree
+
+instance Ord s => Ord (TodoTree s) where
+  compare = compare `on` (^. to runTodoTree . rootLabel . to ((^. doneAt) &&& (^. content)))
+
 rootLabel :: Lens' (Tree.Tree a) a
 rootLabel = lens Tree.rootLabel (\tree label ->
   Tree.Node label $ Tree.subForest tree
@@ -114,9 +121,9 @@ rootLabel = lens Tree.rootLabel (\tree label ->
 subForest :: Lens' (Tree.Tree a) [Tree.Tree a]
 subForest = lens Tree.subForest (Tree.Node . Tree.rootLabel)
 
-makeTodoTreeValid :: Tree.Tree (Todo s) -> TodoTree s
-makeTodoTreeValid tree =
-  TodoTree $ case (isDone &&& latestDoneAt) tree of
+makeTodoTreeValid :: Ord s => (Tree.Tree (Todo s) -> Tree.Tree (Todo s)) -> Tree.Tree (Todo s) -> TodoTree s
+makeTodoTreeValid makeTodoTreeSValid tree =
+  TodoTree . sortTodoTree . makeTodoTreeSValid $ case (isDone &&& latestDoneAt) tree of
     (True, Just d) -> ((rootLabel . doneAt) .~ d) tree
     _              -> ((rootLabel . doneAt) .~ UnDone) tree
     where
@@ -130,6 +137,12 @@ makeTodoTreeValid tree =
           NodeF todo [] -> todo ^. doneAt . to (toMaybe doneAtToBool)
           NodeF todo mlatests -> maximumMay (((todo ^. doneAt . to (toMaybe doneAtToBool)) : mlatests) ^.. each . _Just))
           tree
+      sortTodoTree :: Ord s => Tree.Tree (Todo s) -> Tree.Tree (Todo s)
+      sortTodoTree tree =
+        tree
+          & subForest %~ sortOn (^. rootLabel . content)
+          & subForest %~ sortOn (^. rootLabel . doneAt . to doneAtToBool)
+          & subForest . mapped %~ sortTodoTree
 
 toMaybe :: (a -> Bool) -> a -> Maybe a
 toMaybe pred a =
