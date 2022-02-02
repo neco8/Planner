@@ -100,6 +100,12 @@ instance IsTodo (Todo s) where
 
 newtype TodoTree s = TodoTree (Tree.Tree (Todo s))
 
+runTodoTree :: TodoTree s -> Tree.Tree (Todo s)
+runTodoTree = coerce
+
+instance PPrint s => PPrint (TodoTree s) where
+  pprint = pprint . runTodoTree
+
 rootLabel :: Lens' (Tree.Tree a) a
 rootLabel = lens Tree.rootLabel (\tree label ->
   Tree.Node label $ Tree.subForest tree
