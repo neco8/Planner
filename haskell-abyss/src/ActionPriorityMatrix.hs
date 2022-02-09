@@ -11,6 +11,7 @@ import           Data.Coerce                (coerce)
 import           Data.Function              (on)
 import           Data.Functor               (void)
 import           Data.Functor.Classes       (Eq1, eq1)
+import           Data.List                  (sort)
 import           Data.Maybe                 (isNothing)
 import           Data.Proxy                 (Proxy (..))
 import           Data.Scientific            (toRealFloat)
@@ -152,7 +153,7 @@ effortParser =
   parserFromMaybe "fail with ActionPriorityMatrix effort parser." $
     getEffort . toRealFloat <$> L.scientific
 
-apmParser :: Parser qwa -> Parser (ActionPriorityMatrix qwa)
+apmParser :: Ord qwa => Parser qwa -> Parser (ActionPriorityMatrix qwa)
 apmParser pqwa = L.indentBlock scn $ do
   (getAPM, information) <- addInformationTo $ do
     optional $ string "- "
@@ -161,4 +162,4 @@ apmParser pqwa = L.indentBlock scn $ do
     impact <- impactParser
     comma
     APM name impact <$> effortParser
-  pure $ L.IndentMany Nothing (pure . getAPM (Tag . runAdditionalInformation <$> fromList information) . fromList) pqwa
+  pure $ L.IndentMany Nothing (pure . getAPM (Tag . runAdditionalInformation <$> fromList information) . fromList . sort) pqwa

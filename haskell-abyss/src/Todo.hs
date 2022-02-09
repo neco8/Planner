@@ -5,10 +5,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
-module Todo (makeTodoTreeValid, Todo (..), todoParser, doneAt, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, At(..), DoneAt, toggleAt, doneAtAt, atLocalTime, TodoTree) where
+module Todo (makeTodoTreeValid, Todo (..), todoParser, doneAt, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, At(..), DoneAt, toggleAt, doneAtAt, atLocalTime, TodoTree, runTodoTree) where
 import           AdditionalInformation (AdditionalInformation (..),
                                         addInformationTo,
                                         runAdditionalInformation)
+import           Control.Applicative   (Alternative, empty)
 import           Control.Arrow         ((&&&))
 import           Data.Fixed            (Fixed (MkFixed))
 import           Data.Function         (fix, on)
@@ -30,7 +31,9 @@ import           Data.Time             (LocalTime (LocalTime), TimeZone,
                                         utcToZonedTime, zonedTimeToUTC)
 import qualified Data.Tree             as Tree (Tree (..), rootLabel, subForest)
 import           Data.Vector           (Vector)
+import           Debug.Trace           (trace)
 import           GHC.Base              (coerce)
+import           GHC.Exts              (Down (Down))
 import           Lens.Micro            (Lens', LensLike', Traversal', _Just,
                                         each, filtered, lens, mapped, to, (%~),
                                         (&), (.~), (^.), (^..), (^?))
@@ -111,7 +114,7 @@ instance Eq s => Eq (TodoTree s) where
   (==) = (==) `on` runTodoTree
 
 instance Ord s => Ord (TodoTree s) where
-  compare = compare `on` (^. to runTodoTree . rootLabel . to ((^. doneAt) &&& (^. content)))
+  compare = compare `on` (^. to runTodoTree . rootLabel . to ((^. doneAt . to Down) &&& (^. content)))
 
 rootLabel :: Lens' (Tree.Tree a) a
 rootLabel = lens Tree.rootLabel (\tree label ->
@@ -123,9 +126,7 @@ subForest = lens Tree.subForest (Tree.Node . Tree.rootLabel)
 
 makeTodoTreeValid :: Ord s => (Tree.Tree (Todo s) -> Tree.Tree (Todo s)) -> Tree.Tree (Todo s) -> TodoTree s
 makeTodoTreeValid makeTodoTreeSValid tree =
-  TodoTree . sortTodoTree . makeTodoTreeSValid $ case (isDone &&& getLatestDoneAt) tree of
-    (True, Just d) -> ((rootLabel . doneAt) .~ d) tree
-    _              -> ((rootLabel . doneAt) .~ UnDone) tree
+  TodoTree . sortTodoTree . makeTodoTreeSValid $ makeDone tree
     where
       isDone :: Tree.Tree (Todo s) -> Bool
       isDone tree = case tree ^. subForest . to nonEmpty . to (fmap $ all isDone) of
@@ -133,23 +134,29 @@ makeTodoTreeValid makeTodoTreeSValid tree =
         Nothing   -> tree ^. rootLabel . doneAt . to doneAtToBool
       getLatestDoneAt :: Tree.Tree (Todo s) -> Maybe DoneAt
       getLatestDoneAt tree =
-        cata (\case
-          NodeF todo [] -> todo ^. doneAt . to (toMaybe doneAtToBool)
-          NodeF todo mlatests -> maximumMay (((todo ^. doneAt . to (toMaybe doneAtToBool)) : mlatests) ^.. each . _Just))
+        let getLatest = (^. doneAt . to (wrapWhen doneAtToBool))
+         in cata (\case
+          NodeF todo mlatests -> maximumMay ((getLatest todo : mlatests) ^.. each . _Just))
           tree
+      makeDone :: Tree.Tree (Todo s) -> Tree.Tree (Todo s)
+      makeDone tree =
+        let subForestValidTree = tree & subForest . mapped %~ makeDone
+         in case (isDone &&& getLatestDoneAt) subForestValidTree of
+          (True, Just d) -> subForestValidTree & rootLabel . doneAt .~ d
+          _              -> subForestValidTree & rootLabel . doneAt .~ UnDone
       sortTodoTree :: Ord s => Tree.Tree (Todo s) -> Tree.Tree (Todo s)
       sortTodoTree tree =
         tree
           & subForest %~ sortOn (^. rootLabel . content)
-          & subForest %~ sortOn (^. rootLabel . doneAt . to doneAtToBool)
+          & subForest %~ sortOn (^. rootLabel . doneAt . to Down)
           & subForest . mapped %~ sortTodoTree
 
-toMaybe :: (a -> Bool) -> a -> Maybe a
-toMaybe pred a =
+wrapWhen :: Alternative f => (a -> Bool) -> a -> f a
+wrapWhen pred a =
   if pred a then
-    Just a
+    pure a
   else
-    Nothing
+    empty
 
 instance PPrint s => PPrint (Todo s) where
   pprint =

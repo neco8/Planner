@@ -24,14 +24,16 @@ import           Data.Vector            (Vector, fromList, partition, toList)
 import           ForWork                (ForWorkActionPriorityMatrix (..),
                                          changeFilePathForWork)
 import           Lens.Micro             (_2, mapped, sets, to, (%~), (<%~),
-                                         (^.))
+                                         (<&>), (^.))
 import           Options.Declarative    (Arg, Cmd, Flag, Group (..),
                                          Option (get), run, subCmd)
 import           PPrint                 (PPrint (pprint))
 import           Parser                 (treeParser)
 import           Prelude                hiding (getContents, getLine, lines,
                                          putStr, putStrLn, readFile, writeFile)
-import           QuickWinAnalysis       (QuickWinAnalysis, qwaParser)
+import           QuickWinAnalysis       (QWATodoTree, QuickWinAnalysis,
+                                         makeQWATodoTreeValid, qwaParser,
+                                         runQWATodoTree)
 import           Replace.Megaparsec     (streamEdit)
 import           System.Exit            (die)
 import           Text.Megaparsec        (errorBundlePretty, optional, parse,
@@ -40,7 +42,7 @@ import           Text.Megaparsec.Char   (newline)
 import           Todo                   (IsTodo, Todo, VsCodeTodo (..),
                                          atLocalTime, doneAt, doneAtAt,
                                          doneAtToBool, exactTodoParser,
-                                         todoParser, toggleAt)
+                                         runTodoTree, todoParser, toggleAt)
 
 logo = "██████╗ ██╗      █████╗ ███╗   ██╗███╗   ██╗███████╗██████╗ \n██╔══██╗██║     ██╔══██╗████╗  ██║████╗  ██║██╔════╝██╔══██╗ \n██████╔╝██║     ███████║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝ \n██╔═══╝ ██║     ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗ \n██║     ███████╗██║  ██║██║ ╚████║██║ ╚████║███████╗██║  ██║ \n╚═╝     ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ \n"
 
@@ -113,18 +115,11 @@ parse_ :: IO Text -> ([ActionPriorityMatrix (Tree (Todo QuickWinAnalysis))] -> I
 parse_ input f = do
   i <- input
   zonedTime <- getZonedTime
-  case parse (some $ apmParser (treeParser (todoParser zonedTime qwaParser)) <* optional newline) "" i of
+  case parse (some $ apmParser (makeQWATodoTreeValid <$> treeParser (todoParser zonedTime qwaParser)) <* optional newline) "" i of
     Left err -> die $ errorBundlePretty err
     Right as -> do
-      let apms = (qwas %~ sortTodoQWA) <$> L.sort as
-      f apms
-
-sortTodoQWA :: (Ord t, IsTodo t) => Vector (Tree t) -> Vector (Tree t)
-sortTodoQWA =
-  uncurry (<>) . partition (not . all (^. doneAt . to doneAtToBool)) . sort . (mapped . sets (\f s -> Node (rootLabel s) $ f $ subForest s) %~ (toList . sortTodoQWA . fromList))
-
-sort :: Ord a => Vector a -> Vector a
-sort = fromList . L.sort . toList
+      let apms = L.sort as
+      f $ (qwas . mapped %~ runTodoTree . runQWATodoTree) <$> apms
 
 function :: Flag "t" '["toggle-done"] "" "toggle done todo" Bool ->
   Flag "" '["adjust-done-day"] "HOW_MANY_DAYS_TO_ADJUST" "adjust done-day back and forth" (Maybe Int) ->

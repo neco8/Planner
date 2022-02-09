@@ -1,17 +1,27 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 module QuickWinAnalysis where
 import           Data.Coerce                (coerce)
-import           Data.Maybe                 (isNothing)
+import           Data.Function              (on)
+import           Data.Functor.Base          (TreeF (NodeF))
+import           Data.Functor.Foldable      (Recursive (cata))
+import           Data.List.NonEmpty         (nonEmpty)
+import           Data.Maybe                 (fromMaybe, isNothing)
 import           Data.Ord                   (Down (..))
 import           Data.Scientific            (toRealFloat)
 import qualified Data.Text                  as T (Text, dropWhile, dropWhileEnd,
                                                   find)
+import qualified Data.Tree                  as Tree (Tree (..))
+import           Lens.Micro                 (Lens', lens, to, (.~), (^.))
 import           Lens.Micro.TH              (makeLenses)
 import           PPrint                     (PPrint (pprint))
 import           Parser                     (Parser, comma, parserFromMaybe,
                                              separatedParser)
+import           Safe.Foldable              (maximumMay, minimumMay)
 import qualified Text.Megaparsec.Char.Lexer as L (scientific)
+import           Todo                       (Todo, TodoTree, content, doneAt,
+                                             doneAtToBool, makeTodoTreeValid)
 
 newtype Name = Name T.Text deriving (Eq, Ord, Show)
 
@@ -67,6 +77,39 @@ instance PPrint QuickWinAnalysis where
 qwaToCriterion :: QuickWinAnalysis -> Down (Float, EaseOfImplement, Impact)
 qwaToCriterion qwa =
   Down (runEaseOfImplement (_easeOfImplement qwa) * runImpact (_impact qwa), _easeOfImplement qwa, _impact qwa)
+
+newtype QWATodoTree = QWATT (TodoTree QuickWinAnalysis)
+
+runQWATodoTree :: QWATodoTree -> TodoTree QuickWinAnalysis
+runQWATodoTree = coerce
+
+instance PPrint QWATodoTree where
+  pprint = pprint . runQWATodoTree
+
+instance Eq QWATodoTree where
+  (==) = (==) `on` runQWATodoTree
+
+instance Ord QWATodoTree where
+  compare = compare `on` runQWATodoTree
+
+rootLabel :: Lens' (Tree.Tree a) a
+rootLabel = lens Tree.rootLabel (\tree b -> Tree.Node b $ Tree.subForest tree)
+
+subForest :: Lens' (Tree.Tree a) [Tree.Tree a]
+subForest = lens Tree.subForest (Tree.Node . Tree.rootLabel)
+
+makeQWATodoTreeValid :: Tree.Tree (Todo QuickWinAnalysis) -> QWATodoTree
+makeQWATodoTreeValid tree =
+  QWATT $ makeTodoTreeValid ((\f -> cata (\case
+    NodeF root sub -> Tree.Node (f (getQuickest $ Tree.Node root sub) root) sub
+   )) (\quickest -> (content . impact .~ (quickest ^. impact)) . (content . easeOfImplement .~ (quickest ^. easeOfImplement)))) tree
+  where
+    getQuickest :: Tree.Tree (Todo QuickWinAnalysis) -> QuickWinAnalysis
+    getQuickest tree =
+      cata (\case
+        NodeF qwatodo quickests -> fromMaybe qwatodo $ minimumMay $ filter (^. doneAt . to doneAtToBool . to not) quickests
+      ) tree
+        ^. content
 
 -- parser
 
