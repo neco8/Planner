@@ -14,13 +14,14 @@ import           Data.Foldable          (all)
 import           Data.Functor           (void)
 import qualified Data.List              as L (sort)
 import           Data.Maybe             (fromMaybe, isJust, maybe)
-import           Data.Text              (Text, lines, pack)
+import           Data.Text              (Text, lines, pack, unpack)
 import           Data.Text.IO           (getContents, getLine, putStr, putStrLn,
                                          readFile, writeFile)
 import           Data.Time              (addLocalTime, getZonedTime,
                                          zonedTimeToUTC)
 import           Data.Tree              (Tree (Node, rootLabel, subForest))
 import           Data.Vector            (Vector, fromList, partition, toList)
+import           EditorPipe             (editorPipe)
 import           ForWork                (ForWorkActionPriorityMatrix (..),
                                          changeFilePathForWork)
 import           Lens.Micro             (_2, mapped, sets, to, (%~), (<%~),
@@ -51,6 +52,7 @@ main = run "Planner" (Just "0.2.0") $
   Group ("Planner program" <> "\n\n" <> logo)
     [ subCmd "compile"  compile
     , subCmd "function" function
+    , subCmd "pipe" pipe
     ]
 
 -- TODO: todo編集用のtui。設定ファイルがあって、それには入力用・保存用のファイルが書いてある。コマンドでも指定可能
@@ -143,3 +145,11 @@ function' isToggle mhowManyDays = do
     adjustTime _ Nothing = id
     adjustTime zonedTime (Just howManyDays) = streamEdit (exactTodoParser zonedTime qwaParser) $
       pprint . (doneAt . doneAtAt . atLocalTime %~ addLocalTime (fromInteger $ toInteger $ howManyDays * 24 * 60 * 60))
+
+pipe ::
+  Flag "e" '["editor"] "" "editor to use" (Maybe String) ->
+  Cmd "editor pipe command" ()
+pipe meditor = liftIO $ do
+  input <- unpack <$> getContents
+  output <- pack <$> editorPipe (get meditor) input
+  putStr output
