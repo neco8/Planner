@@ -37,6 +37,7 @@ dependencies:
 - time
 - recursion-schemes
 - safe
+- process
 
 library:
   source-dirs: src
