@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds       #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -8,10 +9,8 @@ import           ActionPriorityMatrix   (ActionPriorityMatrix,
                                          qwas)
 import           Chart                  (getChart)
 import           Control.Applicative    ((<|>))
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Class (liftIO)
 import           Data.Coerce            (coerce)
-import           Data.Foldable          (all)
-import           Data.Functor           (void)
 import qualified Data.List              as L (sort)
 import           Data.Maybe             (fromMaybe, isJust, maybe)
 import           Data.Text              (Text, lines, pack, unpack)
@@ -147,9 +146,7 @@ function' isToggle mhowManyDays = do
       pprint . (doneAt . doneAtAt . atLocalTime %~ addLocalTime (fromInteger $ toInteger $ howManyDays * 24 * 60 * 60))
 
 pipe ::
-  Flag "e" '["editor"] "" "editor to use" (Maybe String) ->
   Cmd "editor pipe command" ()
-pipe meditor = liftIO $ do
-  input <- unpack <$> getContents
-  output <- pack <$> editorPipe (get meditor) input
+pipe = liftIO $ do
+  output <- pack <$> editorPipe
   putStr output

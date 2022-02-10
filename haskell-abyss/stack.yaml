@@ -49,6 +49,7 @@ extra-deps:
   - dual-tree-0.2.3.0@sha256:be4b8ecb2ecef798f88ee569d043f3f19c32f6dd083329cd7cfcb482f0bc6233,2882
   - monoid-extras-0.6.1@sha256:294eaeb51e0d047500119131f133bc4a7988f330baa4bb20256995aae3385b33,2220
   - statestack-0.3@sha256:437941f253bc7a6d8321e67938667bae53d7765b256a45976accadd85f6e1703,1146
+  - shh-0.7.2.0@sha256:81d5aaf88d85ffcaa5b37e6df6fce820f7ddb145b083b2df0ed43b934e6d3c62,2337
 # - acme-missiles-0.3
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a

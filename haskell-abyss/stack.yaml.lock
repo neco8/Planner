@@ -95,6 +95,13 @@ packages:
       sha256: 5b0ba98ac695eccbba33aae8eccf2b6dd8aa3d16d38db65e9e4c231aaa5e4082
   original:
     hackage: statestack-0.3@sha256:437941f253bc7a6d8321e67938667bae53d7765b256a45976accadd85f6e1703,1146
+- completed:
+    hackage: shh-0.7.2.0@sha256:81d5aaf88d85ffcaa5b37e6df6fce820f7ddb145b083b2df0ed43b934e6d3c62,2337
+    pantry-tree:
+      size: 581
+      sha256: 438923a3fdee556cd15b46b67e19774a6da73c9c1ceacd598fe5ea724a54253f
+  original:
+    hackage: shh-0.7.2.0@sha256:81d5aaf88d85ffcaa5b37e6df6fce820f7ddb145b083b2df0ed43b934e6d3c62,2337
 snapshots:
 - completed:
     size: 586110

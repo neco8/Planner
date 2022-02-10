@@ -38,6 +38,8 @@ dependencies:
 - recursion-schemes
 - safe
 - process
+- shh
+- bytestring
 
 library:
   source-dirs: src

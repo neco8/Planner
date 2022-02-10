@@ -44,6 +44,7 @@ library
     , barbies
     , barbies-th
     , base >=4.7 && <5
+    , bytestring
     , containers
     , megaparsec
     , microlens
@@ -54,6 +55,7 @@ library
     , replace-megaparsec
     , safe
     , scientific
+    , shh
     , text
     , time
     , vector
@@ -73,6 +75,7 @@ executable planner
     , barbies
     , barbies-th
     , base >=4.7 && <5
+    , bytestring
     , containers
     , megaparsec
     , microlens
@@ -83,6 +86,7 @@ executable planner
     , replace-megaparsec
     , safe
     , scientific
+    , shh
     , text
     , time
     , vector
@@ -104,6 +108,7 @@ test-suite Planner-tasty
     , barbies
     , barbies-th
     , base >=4.7 && <5
+    , bytestring
     , containers
     , doctest
     , hspec-megaparsec
@@ -116,6 +121,7 @@ test-suite Planner-tasty
     , replace-megaparsec
     , safe
     , scientific
+    , shh
     , tasty
     , text
     , time
