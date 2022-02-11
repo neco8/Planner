@@ -1,17 +1,24 @@
 module EditorPipe where
 
-import           GHC.IO.Handle (hDuplicate)
-import           Safe          (headMay)
-import           Shh           (exe)
-import           System.IO     (hClose, hGetContents, openTempFile, stdin)
+import           GHC.IO.Handle           (hDuplicate, hIsClosed, hPutStr)
+import           GHC.IO.Handle.Internals (withHandle)
+import           Safe                    (headMay)
+import           Shh                     (exe)
+import           System.IO               (IOMode (ReadWriteMode, WriteMode),
+                                          getContents, hClose, hGetContents,
+                                          openFile, openTempFile, stdin, stdout,
+                                          withFile)
+import           System.Process          (CreateProcess (new_session, std_in, std_out),
+                                          StdStream (UseHandle), createProcess,
+                                          proc, waitForProcess)
 
-editorPipe :: IO String
+editorPipe :: IO ()
 editorPipe = do
   (path, handle) <- openTempFile "/tmp" "pipe.tmp"
+  getContents' >>= hPutStr handle
   hClose handle
-  getContents' >>= writeFile path
   vim path
-  reverse . dropWhen (== '\n') . reverse <$> readFile path
+  readFile path >>= putStr . reverse . dropWhen (== '\n') . reverse
     where
       dropWhen pred as =
         case pred <$> headMay as of
