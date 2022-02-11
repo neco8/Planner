@@ -5,7 +5,8 @@
 
 module ActionPriorityMatrix where
 
-import           AdditionalInformation      (addInformationTo,
+import           AdditionalInformation      (AdditionalInformation (AdditionalInformation),
+                                             addInformationTo,
                                              runAdditionalInformation)
 import           Data.Coerce                (coerce)
 import           Data.Function              (on)
@@ -21,8 +22,9 @@ import qualified Data.Text                  as T (Text, dropWhile, dropWhileEnd,
 import           Data.Tree                  (Tree (..))
 import           Data.Vector                (Vector, concatMap, fromList,
                                              toList)
+import           GHC.Exts                   (sortWith)
 import           GHC.Generics               (Generic)
-import           Lens.Micro                 ((%~), (&), (^.))
+import           Lens.Micro                 (to, (%~), (&), (^.))
 import           Lens.Micro.TH              (makeLenses)
 import           PPrint                     (PPrint, pprint)
 import           Parser                     (Parser, comma, parserFromMaybe,
@@ -69,7 +71,7 @@ getEffort n
   | n > 0 && n <= 10 = Just $ Effort n
   | otherwise = Nothing
 
-newtype Tag = Tag T.Text deriving (Eq, Ord, Show)
+newtype Tag = Tag AdditionalInformation deriving (Eq, Ord, Show)
 
 instance PPrint Tag where
   pprint tag = "#" <> coerce tag
@@ -162,4 +164,10 @@ apmParser pqwa = L.indentBlock scn $ do
     impact <- impactParser
     comma
     APM name impact <$> effortParser
-  pure $ L.IndentMany Nothing (pure . getAPM (Tag . runAdditionalInformation <$> fromList information) . fromList . sort) pqwa
+  pure $ L.IndentMany Nothing (pure . getAPM (Tag <$> fromList information) . fromList . sort) pqwa
+
+apmsParser :: Ord qwa => Parser qwa -> Parser [ActionPriorityMatrix qwa]
+apmsParser p = sortWith (^. tags . to (elem archived)) . sort <$> some (apmParser p <* optional newline)
+
+archived :: Tag
+archived = Tag $ AdditionalInformation "archived"

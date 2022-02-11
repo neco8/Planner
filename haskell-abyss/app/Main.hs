@@ -1,17 +1,16 @@
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Main where
 
 import           ActionPriorityMatrix   (ActionPriorityMatrix,
-                                         MDActionPriorityMatrix (..), apmParser,
-                                         qwas)
+                                         MDActionPriorityMatrix (..),
+                                         apmsParser, qwas)
 import           Chart                  (getChart)
 import           Control.Applicative    ((<|>))
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Coerce            (coerce)
-import qualified Data.List              as L (sort)
 import           Data.Maybe             (fromMaybe, isJust, maybe)
 import           Data.Text              (Text, lines, pack, unpack)
 import           Data.Text.IO           (getContents, getLine, putStr, putStrLn,
@@ -20,7 +19,6 @@ import           Data.Time              (addLocalTime, getZonedTime,
                                          zonedTimeToUTC)
 import           Data.Tree              (Tree (Node, rootLabel, subForest))
 import           Data.Vector            (Vector, fromList, partition, toList)
-import           EditorPipe             (editorPipe)
 import           ForWork                (ForWorkActionPriorityMatrix (..),
                                          changeFilePathForWork)
 import           Lens.Micro             (_2, mapped, sets, to, (%~), (<%~),
@@ -51,7 +49,6 @@ main = run "Planner" (Just "0.2.0") $
   Group ("Planner program" <> "\n\n" <> logo)
     [ subCmd "compile"  compile
     , subCmd "function" function
-    , subCmd "pipe" pipe
     ]
 
 -- TODO: todo編集用のtui。設定ファイルがあって、それには入力用・保存用のファイルが書いてある。コマンドでも指定可能
@@ -116,10 +113,9 @@ parse_ :: IO Text -> ([ActionPriorityMatrix (Tree (Todo QuickWinAnalysis))] -> I
 parse_ input f = do
   i <- input
   zonedTime <- getZonedTime
-  case parse (some $ apmParser (makeQWATodoTreeValid <$> treeParser (todoParser zonedTime qwaParser)) <* optional newline) "" i of
+  case parse (apmsParser (makeQWATodoTreeValid <$> treeParser (todoParser zonedTime qwaParser))) "" i of
     Left err -> die $ errorBundlePretty err
-    Right as -> do
-      let apms = L.sort as
+    Right apms -> do
       f $ (qwas . mapped %~ runTodoTree . runQWATodoTree) <$> apms
 
 function :: Flag "t" '["toggle-done"] "" "toggle done todo" Bool ->
@@ -144,9 +140,3 @@ function' isToggle mhowManyDays = do
     adjustTime _ Nothing = id
     adjustTime zonedTime (Just howManyDays) = streamEdit (exactTodoParser zonedTime qwaParser) $
       pprint . (doneAt . doneAtAt . atLocalTime %~ addLocalTime (fromInteger $ toInteger $ howManyDays * 24 * 60 * 60))
-
-pipe ::
-  Cmd "editor pipe command" ()
-pipe = liftIO $ do
-  output <- pack <$> editorPipe
-  putStr output
