@@ -5,7 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
-module Todo (makeTodoTreeValid, Todo (..), todoParser, doneAt, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, At(..), DoneAt, toggleAt, doneAtAt, atLocalTime, TodoTree, runTodoTree) where
+module Todo (makeTodoTreeValid, Todo (..), todoParser, doneAt, content, VsCodeTodo (..), IsTodo, exactTodoParser, doneAtToBool, At(..), DoneAt, toggleAt, doneAtAt, atLocalTime, TodoTree, runTodoTree, timeParser) where
 import           AdditionalInformation (AdditionalInformation (..),
                                         addInformationTo,
                                         runAdditionalInformation)
@@ -33,13 +33,14 @@ import qualified Data.Tree             as Tree (Tree (..), rootLabel, subForest)
 import           Data.Vector           (Vector)
 import           Debug.Trace           (trace)
 import           GHC.Base              (coerce)
-import           GHC.Exts              (Down (Down))
-import           Lens.Micro            (Lens', LensLike', Traversal', _Just,
+import           GHC.Exts              (Down (Down), IsList (fromList))
+import           Lens.Micro            (Lens', LensLike', Traversal', _2, _Just,
                                         each, filtered, lens, mapped, to, (%~),
                                         (&), (.~), (^.), (^..), (^?))
 import           Lens.Micro.TH         (makeLenses)
 import           PPrint                (PPrint, pprint)
 import           Parser                (Parser, parserFromMaybe)
+import           Safe                  (initMay, lastMay)
 import           Safe.Foldable         (maximumMay)
 import           Text.Megaparsec       (choice, count, count', parseMaybe,
                                         parseTest, try, (<|>))
@@ -186,8 +187,8 @@ instance (IsTodo a, IsTodo b) => IsTodo (Either a b) where
 
 -- parser
 
-atParser :: TimeZone -> Parser At
-atParser timeZone = parserFromMaybe "failed with constructing At." $ do
+timeParser :: Parser (Int, Int, Int, Int, Int, Int)
+timeParser = do
   year <- rangeParser 2000 3000
   char '/'
   month <- rangeParser 1 12
@@ -199,29 +200,34 @@ atParser timeZone = parserFromMaybe "failed with constructing At." $ do
   minute <- rangeParser 0 59
   char ':'
   second <- rangeParser 0 59
+  pure (year, month, day, hour, minute, second)
+  where
+    getNumberOfDigit :: Int -> Int
+    getNumberOfDigit num =
+      let f :: ((Int, Int) -> (Int, Int)) -> (Int, Int) -> (Int, Int)
+          f r (nod, n)
+            | n < 10 = (nod, n)
+            | otherwise = r (nod + 1, n `div` 10)
+       in fst $ fix f (1, num)
+    rangeParser :: Int -> Int -> Parser Int
+    rangeParser min max = do
+      let minNumberOfDigit = getNumberOfDigit min
+          maxNumberOfDigit = getNumberOfDigit max
+      numStr <- count' minNumberOfDigit maxNumberOfDigit digitChar
+      case readMaybe numStr :: Maybe Int of
+        Just num -> if num >= min && num <= max then
+          pure num
+        else
+          fail $ "invalid range. " <> show min <> " <= x <= " <> show max <> "."
+        Nothing -> fail $ "this is not a number. '" <> numStr <> "'"
+
+atParser :: TimeZone -> Parser At
+atParser timeZone = parserFromMaybe "failed with constructing At." $ do
+  (year, month, day, hour, minute, second) <- timeParser
   let mtod = makeTimeOfDayValid hour minute . fromRational . (% 1) $ toInteger second
       mdoy = fromGregorianValid (toInteger year) month day
       mzonedTime = flip ZonedTime timeZone <$> (LocalTime <$> mdoy <*> mtod)
   pure (At <$> mzonedTime)
-    where
-      rangeParser :: Int -> Int -> Parser Int
-      rangeParser min max = do
-        let minNumberOfDigit = getNumberOfDigit min
-            maxNumberOfDigit = getNumberOfDigit max
-        numStr <- count' minNumberOfDigit maxNumberOfDigit digitChar
-        case readMaybe numStr :: Maybe Int of
-          Just num -> if num >= min && num <= max then
-            pure num
-          else
-            fail $ "invalid range. " <> show min <> " <= x <= " <> show max <> "."
-          Nothing -> fail $ "this is not a number. '" <> numStr <> "'"
-      getNumberOfDigit :: Int -> Int
-      getNumberOfDigit num =
-        let f :: ((Int, Int) -> (Int, Int)) -> (Int, Int) -> (Int, Int)
-            f r (nod, n)
-              | n < 10 = (nod, n)
-              | otherwise = r (nod + 1, n `div` 10)
-         in fst $ fix f (1, num)
 
 todoWithoutTimeParser_ :: Vector (Parser Bool) -> Parser s -> Parser (At -> Todo s)
 todoWithoutTimeParser_ pdones ps = do
@@ -246,15 +252,21 @@ doneVsCodeParser = try (True <$ string "✔ ") <|> (False <$ string "☐ ")
 boolParsers :: Vector (Parser Bool)
 boolParsers = [doneMDParser, doneVsCodeParser]
 
+todoParserBase :: (Parser (Vector AdditionalInformation -> s) -> Parser (At -> Todo (Vector AdditionalInformation -> s)))
+  -> ZonedTime
+  -> Parser (Vector AdditionalInformation -> s)
+  -> Parser (Todo s)
+todoParserBase withoutTimeParser now p = do
+  (getTodo, information) <- addInformationTo (withoutTimeParser p)
+  case rightMost (parseMaybe (atParser (zonedTimeZone now)) . runAdditionalInformation) information of
+    (Just at, other) -> pure . (content %~ (&) (fromList other)) . getTodo $ at
+    (Nothing, other) -> pure . (content %~ (&) (fromList other)) . getTodo $ At now
+
 todoWithoutTimeParser :: Parser s -> Parser (At -> Todo s)
 todoWithoutTimeParser = todoWithoutTimeParser_ boolParsers
 
-todoParser :: ZonedTime -> Parser s -> Parser (Todo s)
-todoParser now p = do
-  (getTodo, information) <- addInformationTo (todoWithoutTimeParser p)
-  case rightMost (parseMaybe (atParser (zonedTimeZone now))) (runAdditionalInformation <$> information) of
-    Just at -> pure . getTodo $ at
-    _       -> pure . getTodo $ At now
+todoParser :: ZonedTime -> Parser (Vector AdditionalInformation -> s) -> Parser (Todo s)
+todoParser = todoParserBase todoWithoutTimeParser
 
 exactTodoWithoutTimeParser :: Parser s -> Parser (At -> Todo s)
 exactTodoWithoutTimeParser ps = do
@@ -266,29 +278,19 @@ exactTodoWithoutTimeParser ps = do
     else
       Todo UnDone s
 
-exactTodoParser :: ZonedTime -> Parser s -> Parser (Todo s)
-exactTodoParser now p = do
-  (getTodo, information) <- addInformationTo (exactTodoWithoutTimeParser p)
-  case rightMost (parseMaybe (atParser (zonedTimeZone now))) (runAdditionalInformation <$> information) of
-    Just at -> pure . getTodo $ at
-    _       -> pure . getTodo $ At now
+exactTodoParser :: ZonedTime -> Parser (Vector AdditionalInformation -> s) -> Parser (Todo s)
+exactTodoParser = todoParserBase exactTodoWithoutTimeParser
 
 -- util
 
-rightMost :: (a -> Maybe b) -> [a] -> Maybe b
-rightMost f prevls = do
-  lasta <- last' prevls
-  inita <- init' prevls
-  case f lasta of
-    Just b  -> Just b
-    Nothing -> rightMost f inita
-
-last' :: [a] -> Maybe a
-last' ls = case length ls of
-  0 -> Nothing
-  _ -> Just $ last ls
-
-init' :: [a] -> Maybe [a]
-init' ls = case length ls of
-  0 -> Nothing
-  _ -> Just $ init ls
+rightMost :: (a -> Maybe b) -> [a] -> (Maybe b, [a])
+rightMost f ls = go (Nothing, ls)
+  where
+    go (mb, as) = case do
+      i <- initMay as
+      l <- lastMay as
+      pure (i, l) of
+        Just (i, l) -> case f l of
+          Just b  -> (Just b, i)
+          Nothing -> go (Nothing, i) & _2 %~ (<> [l])
+        Nothing     -> (Nothing, as)
