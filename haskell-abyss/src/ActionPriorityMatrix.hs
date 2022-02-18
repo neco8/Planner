@@ -138,6 +138,11 @@ newtype MDActionPriorityMatrix qwa = MDAPM (ActionPriorityMatrix qwa)
 instance PPrint qwa => PPrint (MDActionPriorityMatrix qwa) where
   pprint (MDAPM apm) = "- " <> pprint apm
 
+newtype KanbanActionPriorityMatrix qwa = KAPM (ActionPriorityMatrix qwa)
+
+instance PPrint qwa => PPrint (KanbanActionPriorityMatrix qwa) where
+  pprint (KAPM apm) = "## " <> pprint apm
+
 -- parser
 
 nameParser :: Parser Name
@@ -159,6 +164,7 @@ apmParser :: Ord qwa => Parser qwa -> Parser (ActionPriorityMatrix qwa)
 apmParser pqwa = L.indentBlock scn $ do
   (getAPM, information) <- addInformationTo $ do
     optional $ string "- "
+    optional $ string "## "
     name <- nameParser
     comma
     impact <- impactParser

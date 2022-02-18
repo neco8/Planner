@@ -5,6 +5,7 @@
 module Main where
 
 import           ActionPriorityMatrix   (ActionPriorityMatrix,
+                                         KanbanActionPriorityMatrix (..),
                                          MDActionPriorityMatrix (..),
                                          apmsParser, qwas)
 import           Chart                  (getChart)
@@ -120,16 +121,18 @@ parse_ input f = do
 
 function :: Flag "t" '["toggle-done"] "" "toggle done todo" Bool ->
   Flag "" '["adjust-done-day"] "HOW_MANY_DAYS_TO_ADJUST" "adjust done-day back and forth" (Maybe Int) ->
+  Flag "" '["is-kanban-apm"] "" "is kanban style" Bool ->
   Cmd "function command" ()
-function isToggle howManyDays = liftIO $ function' (get isToggle) (get howManyDays)
+function isToggle howManyDays isKanban = liftIO $ function' (get isToggle) (get howManyDays) (get isKanban)
 
-function' :: Bool -> Maybe Int -> IO ()
-function' isToggle mhowManyDays = do
+function' :: Bool -> Maybe Int -> Bool -> IO ()
+function' isToggle mhowManyDays isKanban = do
   zonedTime <- getZonedTime
   case () of
     _
       | isToggle -> io $ toggleDone zonedTime
       | isJust mhowManyDays -> io $ adjustTime zonedTime mhowManyDays
+      | isKanban -> parse_ getContents (putStrLn . pprint . fmap KAPM)
       | otherwise -> parse_ getContents (putStrLn . pprint . fmap MDAPM)
   where
     io f = do
