@@ -58,7 +58,7 @@ runImpact = coerce
 
 getImpact :: Float -> Maybe Impact
 getImpact n
-  | n > 0 && n <= 10 = Just $ Impact n
+  | n >= 0 && n <= 10 = Just $ Impact n
   | otherwise = Nothing
 
 newtype Effort = Effort Float deriving (Eq, Ord, Show)
@@ -68,7 +68,7 @@ runEffort = coerce
 
 getEffort :: Float -> Maybe Effort
 getEffort n
-  | n > 0 && n <= 10 = Just $ Effort n
+  | n >= 0 && n <= 10 = Just $ Effort n
   | otherwise = Nothing
 
 newtype Tag = Tag AdditionalInformation deriving (Eq, Ord, Show)

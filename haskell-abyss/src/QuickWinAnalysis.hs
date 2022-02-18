@@ -46,7 +46,7 @@ runEaseOfImplement = coerce
 
 getEaseOfImplement :: Float -> Maybe EaseOfImplement
 getEaseOfImplement n
-  | n > 0 && n <= 10 = Just $ EOI n
+  | n >= 0 && n <= 10 = Just $ EOI n
   | otherwise = Nothing
 
 newtype Impact = Impact Float deriving (Eq, Ord, Show)
@@ -56,7 +56,7 @@ runImpact = coerce
 
 getImpact :: Float -> Maybe Impact
 getImpact n
-  | n > 0 && n <= 10 = Just $ Impact n
+  | n >= 0 && n <= 10 = Just $ Impact n
   | otherwise = Nothing
 
 newtype Tag = Tag AdditionalInformation deriving (Eq, Show)
