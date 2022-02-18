@@ -28,6 +28,7 @@ library
       ActionPriorityMatrix
       AdditionalInformation
       Chart
+      EditorPipe
       ForWork
       Parser
       PPrint
@@ -43,13 +44,18 @@ library
     , barbies
     , barbies-th
     , base >=4.7 && <5
+    , bytestring
     , containers
     , megaparsec
     , microlens
     , microlens-th
     , optparse-declarative
+    , process
+    , recursion-schemes
     , replace-megaparsec
+    , safe
     , scientific
+    , shh
     , text
     , time
     , vector
@@ -69,13 +75,18 @@ executable planner
     , barbies
     , barbies-th
     , base >=4.7 && <5
+    , bytestring
     , containers
     , megaparsec
     , microlens
     , microlens-th
     , optparse-declarative
+    , process
+    , recursion-schemes
     , replace-megaparsec
+    , safe
     , scientific
+    , shh
     , text
     , time
     , vector
@@ -97,6 +108,7 @@ test-suite Planner-tasty
     , barbies
     , barbies-th
     , base >=4.7 && <5
+    , bytestring
     , containers
     , doctest
     , hspec-megaparsec
@@ -104,8 +116,12 @@ test-suite Planner-tasty
     , microlens
     , microlens-th
     , optparse-declarative
+    , process
+    , recursion-schemes
     , replace-megaparsec
+    , safe
     , scientific
+    , shh
     , tasty
     , text
     , time

@@ -5,12 +5,14 @@
 
 module ActionPriorityMatrix where
 
-import           AdditionalInformation      (addInformationTo,
+import           AdditionalInformation      (AdditionalInformation (AdditionalInformation),
+                                             addInformationTo,
                                              runAdditionalInformation)
 import           Data.Coerce                (coerce)
 import           Data.Function              (on)
 import           Data.Functor               (void)
 import           Data.Functor.Classes       (Eq1, eq1)
+import           Data.List                  (sort)
 import           Data.Maybe                 (isNothing)
 import           Data.Proxy                 (Proxy (..))
 import           Data.Scientific            (toRealFloat)
@@ -20,8 +22,9 @@ import qualified Data.Text                  as T (Text, dropWhile, dropWhileEnd,
 import           Data.Tree                  (Tree (..))
 import           Data.Vector                (Vector, concatMap, fromList,
                                              toList)
+import           GHC.Exts                   (sortWith)
 import           GHC.Generics               (Generic)
-import           Lens.Micro                 ((%~), (&), (^.))
+import           Lens.Micro                 (to, (%~), (&), (^.))
 import           Lens.Micro.TH              (makeLenses)
 import           PPrint                     (PPrint, pprint)
 import           Parser                     (Parser, comma, parserFromMaybe,
@@ -55,7 +58,7 @@ runImpact = coerce
 
 getImpact :: Float -> Maybe Impact
 getImpact n
-  | n > 0 && n <= 10 = Just $ Impact n
+  | n >= 0 && n <= 10 = Just $ Impact n
   | otherwise = Nothing
 
 newtype Effort = Effort Float deriving (Eq, Ord, Show)
@@ -65,10 +68,10 @@ runEffort = coerce
 
 getEffort :: Float -> Maybe Effort
 getEffort n
-  | n > 0 && n <= 10 = Just $ Effort n
+  | n >= 0 && n <= 10 = Just $ Effort n
   | otherwise = Nothing
 
-newtype Tag = Tag T.Text deriving (Eq, Ord, Show)
+newtype Tag = Tag AdditionalInformation deriving (Eq, Ord, Show)
 
 instance PPrint Tag where
   pprint tag = "#" <> coerce tag
@@ -135,6 +138,11 @@ newtype MDActionPriorityMatrix qwa = MDAPM (ActionPriorityMatrix qwa)
 instance PPrint qwa => PPrint (MDActionPriorityMatrix qwa) where
   pprint (MDAPM apm) = "- " <> pprint apm
 
+newtype KanbanActionPriorityMatrix qwa = KAPM (ActionPriorityMatrix qwa)
+
+instance PPrint qwa => PPrint (KanbanActionPriorityMatrix qwa) where
+  pprint (KAPM apm) = "## " <> pprint apm
+
 -- parser
 
 nameParser :: Parser Name
@@ -152,13 +160,20 @@ effortParser =
   parserFromMaybe "fail with ActionPriorityMatrix effort parser." $
     getEffort . toRealFloat <$> L.scientific
 
-apmParser :: Parser qwa -> Parser (ActionPriorityMatrix qwa)
+apmParser :: Ord qwa => Parser qwa -> Parser (ActionPriorityMatrix qwa)
 apmParser pqwa = L.indentBlock scn $ do
   (getAPM, information) <- addInformationTo $ do
     optional $ string "- "
+    optional $ string "## "
     name <- nameParser
     comma
     impact <- impactParser
     comma
     APM name impact <$> effortParser
-  pure $ L.IndentMany Nothing (pure . getAPM (Tag . runAdditionalInformation <$> fromList information) . fromList) pqwa
+  pure $ L.IndentMany Nothing (pure . getAPM (Tag <$> fromList information) . fromList . sort) pqwa
+
+apmsParser :: Ord qwa => Parser qwa -> Parser [ActionPriorityMatrix qwa]
+apmsParser p = sortWith (^. tags . to (elem archived)) . sort <$> some (apmParser p <* optional newline)
+
+archived :: Tag
+archived = Tag $ AdditionalInformation "archived"

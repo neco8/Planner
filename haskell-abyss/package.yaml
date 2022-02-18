@@ -35,6 +35,11 @@ dependencies:
 - Chart
 - Chart-diagrams
 - time
+- recursion-schemes
+- safe
+- process
+- shh
+- bytestring
 
 library:
   source-dirs: src
