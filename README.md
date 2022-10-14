@@ -13,7 +13,7 @@ Todo をパース・編集するためのコマンドです。
 プロジェクトの難しさ・重要度によってソートしつつ、todoを管理することを目的に開発しました。
 現在haskellの開発環境をおかしくしてしまったのと、todo管理を[obsidian](https://obsidian.md/)に移行したので開発を停止しています。
 
-https://github.com/neco8/Planner/issues/7
+![planner](https://user-images.githubusercontent.com/43209256/195782453-d0332080-816c-40e4-ad0f-d37aacc9c0ba.gif)
 
 ```
 Commands:
